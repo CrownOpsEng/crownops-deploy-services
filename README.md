@@ -17,7 +17,7 @@ Current public roles:
 
 Current capabilities:
 - Traefik + CouchDB LiveSync deployment for Obsidian
-- automated CouchDB user, database, and security bootstrap
+- automated CouchDB account, database, and security bootstrap
 - restic backup scripts and timers
 - optional SSH-key-based SFTP backup transport
 - optional pre/post backup hooks for service quiesce

@@ -7,14 +7,14 @@
     group: root
     mode: '0700'
 
-- name: Render human vault handoff summary
+- name: Render synced vault handoff summary
   ansible.builtin.copy:
-    dest: "{{ obsidian_handoff_dir }}/HUMAN_VAULT_HANDOFF.md"
+    dest: "{{ obsidian_handoff_dir }}/USER_VAULT_HANDOFF.md"
     owner: root
     group: root
     mode: '0600'
     content: |
-      # Human Vault Handoff
+      # User Vault Handoff
 
       Base URL: https://{{ obsidian_service_subdomain }}.{{ ops_domain }}
 
