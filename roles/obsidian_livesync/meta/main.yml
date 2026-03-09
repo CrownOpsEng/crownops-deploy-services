@@ -1,0 +1,7 @@
+---
+galaxy_info:
+  author: CrownOps
+  description: Deploy the Obsidian LiveSync stack behind Traefik with CouchDB.
+  license: MIT
+  min_ansible_version: "2.17"
+dependencies: []

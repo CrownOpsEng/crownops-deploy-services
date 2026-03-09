@@ -1,0 +1,21 @@
+namespace: crownops
+name: deploy_services
+version: 0.1.0
+readme: README.md
+authors:
+  - CrownOps
+description: Reusable CrownOps service and capability collection for remote deployments.
+license:
+  - MIT
+tags:
+  - infrastructure
+  - services
+  - backups
+  - docker
+  - ubuntu
+dependencies: {}
+build_ignore:
+  - .git
+  - .gitignore
+  - .ansible
+  - dist
