@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Ansible
+        run: pip install "ansible-core==2.17.*"
+
+      - name: Install collection dependencies
+        run: ansible-galaxy collection install -r requirements.yml
+
+      - name: Build collection
+        run: ansible-galaxy collection build . --output-path dist --force
+
+      - name: Syntax check Obsidian playbook
+        run: ansible-playbook --syntax-check -i examples/inventory/hosts.yml playbooks/obsidian.yml
+
+      - name: Syntax check backup playbook
+        run: ansible-playbook --syntax-check -i examples/inventory/hosts.yml playbooks/backups.yml

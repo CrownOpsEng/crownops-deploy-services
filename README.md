@@ -18,3 +18,7 @@ Current public roles:
 Read first:
 - `docs/ARCHITECTURE.md`
 - `docs/QUICKSTART.md`
+
+Quality controls:
+- collection dependency metadata declared in `galaxy.yml`
+- GitHub Actions CI builds the collection and syntax-checks the public service playbooks
