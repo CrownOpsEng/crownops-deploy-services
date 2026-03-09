@@ -16,5 +16,5 @@ Role notes:
 
 - `obsidian_livesync` bootstraps CouchDB users, databases, and security objects automatically
 - `obsidian_livesync` supports `public_https` via Traefik + ACME and `private_mesh` via a caller-supplied base URL; the consuming repo must keep CouchDB off the public firewall in `private_mesh`
-- `restic_host_backups` supports SSH-key-backed SFTP by rendering key and known_hosts material from inventory variables
+- `restic_host_backups` supports the generic `restic_targets` and `restic_backup_jobs` model, including SSH-key-backed SFTP targets
 - `restic_host_backups` also supports pre/post backup command hooks for small-scope service quiesce
