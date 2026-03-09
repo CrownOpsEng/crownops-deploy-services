@@ -16,7 +16,8 @@
     content: |
       # User Vault Handoff
 
-      Base URL: https://{{ obsidian_service_subdomain }}.{{ ops_domain }}
+      Access mode: {{ obsidian_access_mode }}
+      Base URL: {{ obsidian_base_url }}
 
       {% for v in couchdb_vaults %}
       ## {{ v.name }}

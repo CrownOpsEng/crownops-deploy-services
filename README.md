@@ -20,7 +20,7 @@ Current public roles:
 
 Current capabilities:
 
-- Traefik + CouchDB LiveSync deployment for Obsidian
+- Obsidian LiveSync deployment for either `public_https` (Traefik + ACME) or `private_mesh`
 - automated CouchDB account, database, and security bootstrap
 - restic backup scripts and timers
 - optional SSH-key-based SFTP backup transport

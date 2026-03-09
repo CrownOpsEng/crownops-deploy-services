@@ -5,12 +5,15 @@ services:
     restart: unless-stopped
     networks:
       - {{ internal_network_name }}
+{% if obsidian_access_mode == "public_https" %}
       - {{ traefik_network_name }}
+{% endif %}
     ports:
       - "{{ couchdb_bind_host }}:{{ couchdb_port }}:5984"
     volumes:
       - {{ couchdb_dir }}/data:/opt/couchdb/data
       - {{ couchdb_dir }}/etc/local.ini:/opt/couchdb/etc/local.d/local.ini:ro
+{% if obsidian_access_mode == "public_https" %}
     labels:
       traefik.enable: "true"
       traefik.docker.network: "{{ traefik_network_name }}"
@@ -19,8 +22,11 @@ services:
       traefik.http.routers.couchdb.tls: "true"
       traefik.http.routers.couchdb.tls.certresolver: "{{ traefik_certresolver_name }}"
       traefik.http.services.couchdb.loadbalancer.server.port: "5984"
+{% endif %}
 networks:
   {{ internal_network_name }}:
     name: {{ internal_network_name }}
+{% if obsidian_access_mode == "public_https" %}
   {{ traefik_network_name }}:
     external: true
+{% endif %}

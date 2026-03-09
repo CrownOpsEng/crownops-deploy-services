@@ -1,18 +1,43 @@
 ---
+- name: Validate Obsidian access mode
+  ansible.builtin.assert:
+    that:
+      - obsidian_access_mode in ['public_https', 'private_mesh']
+    fail_msg: "obsidian_access_mode must be public_https or private_mesh."
+
 - name: Validate required Obsidian stack variables
   ansible.builtin.assert:
     that:
-      - traefik_dir is defined
       - couchdb_dir is defined
-      - ops_domain is defined
-      - obsidian_service_subdomain is defined
       - couchdb_vaults is defined
       - couchdb_admin_user is defined
       - couchdb_admin_password is defined
-    fail_msg: "obsidian_livesync requires Traefik, CouchDB, and vault variables to be defined by the consuming site repo."
+      - (obsidian_access_mode != 'public_https') or (traefik_dir is defined)
+      - (obsidian_access_mode != 'public_https') or (ops_domain is defined)
+      - (obsidian_access_mode != 'public_https') or (obsidian_service_subdomain is defined)
+      - (obsidian_access_mode != 'private_mesh') or ((obsidian_base_url | string | trim) != '')
+    fail_msg: "obsidian_livesync requires CouchDB, vault, and access-mode variables to be defined by the consuming site repo."
+
+- name: Derive public HTTPS base URL
+  ansible.builtin.set_fact:
+    obsidian_base_url: "https://{{ obsidian_service_subdomain }}.{{ ops_domain }}"
+  when:
+    - obsidian_access_mode == 'public_https'
+    - (obsidian_base_url | string | trim) == ''
+
+- name: Derive effective Obsidian CORS origins
+  ansible.builtin.set_fact:
+    obsidian_effective_cors_origins: >-
+      {{
+        (
+          ['app://obsidian.md', 'capacitor://localhost', obsidian_base_url]
+          + (obsidian_cors_origins | default([]) | list)
+        ) | unique
+      }}
 
 - name: Apply Traefik portion of the Obsidian stack
   ansible.builtin.import_tasks: traefik.yml
+  when: obsidian_access_mode == 'public_https'
 
 - name: Apply CouchDB portion of the Obsidian stack
   ansible.builtin.import_tasks: couchdb.yml
