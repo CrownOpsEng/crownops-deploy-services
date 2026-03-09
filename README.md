@@ -22,9 +22,9 @@ Current capabilities:
 
 - Traefik + CouchDB LiveSync deployment for Obsidian
 - automated CouchDB account, database, and security bootstrap
-- restic backup scripts and timers
+- composable restic targets, jobs, and feature contributions
 - optional SSH-key-based SFTP backup transport
-- optional pre/post backup hooks for service quiesce
+- job-scoped pre/post backup hooks for service quiesce
 
 Read first:
 
