@@ -1,0 +1,29 @@
+JOB_NAME={{ restic_job.name | quote }}
+BACKUP_PATHS=(
+{% for path in restic_job.paths %}
+  {{ path | quote }}
+{% endfor %}
+)
+BACKUP_EXCLUDES=(
+{% for path in restic_job.excludes %}
+  {{ path | quote }}
+{% endfor %}
+)
+PRE_BACKUP_COMMANDS=(
+{% for command in restic_job.pre_commands %}
+  {{ command | quote }}
+{% endfor %}
+)
+POST_BACKUP_COMMANDS=(
+{% for command in restic_job.post_commands %}
+  {{ command | quote }}
+{% endfor %}
+)
+BACKUP_TAGS=(
+{% for tag in restic_job.tags %}
+  {{ tag | quote }}
+{% endfor %}
+)
+RETENTION_DAILY={{ restic_job.retention_daily | int }}
+RETENTION_WEEKLY={{ restic_job.retention_weekly | int }}
+RETENTION_MONTHLY={{ restic_job.retention_monthly | int }}

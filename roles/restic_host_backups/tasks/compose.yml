@@ -1,0 +1,102 @@
+---
+- name: Initialize effective backup configuration
+  ansible.builtin.set_fact:
+    restic_effective_targets: []
+    restic_effective_target_names: []
+    restic_effective_jobs: []
+    restic_effective_pairs: []
+    restic_desired_unit_paths: []
+
+- name: Normalize enabled backup targets
+  ansible.builtin.set_fact:
+    restic_effective_targets: "{{ restic_effective_targets + [restic_target_normalized] }}"
+  loop: "{{ restic_targets | default([]) }}"
+  loop_control:
+    label: "{{ item.name | default('unnamed-target') }}"
+  vars:
+    restic_target_normalized:
+      name: "{{ item.name | default('') | string }}"
+      repository: "{{ item.repository | default('') | string }}"
+      password: "{{ item.password | default('') | string }}"
+      ssh_private_key: "{{ item.ssh_private_key | default('') | string }}"
+      ssh_known_hosts: "{{ item.ssh_known_hosts | default('') | string }}"
+      sftp_command: "{{ item.sftp_command | default('') | string }}"
+      environment: "{{ item.environment | default({}) }}"
+      auto_init: "{{ item.auto_init | default(restic_default_auto_init) | bool }}"
+  when: item.enabled | default(true) | bool
+
+- name: Capture effective target names
+  ansible.builtin.set_fact:
+    restic_effective_target_names: "{{ restic_effective_targets | map(attribute='name') | list }}"
+
+- name: Normalize backup jobs with merged contributions
+  ansible.builtin.set_fact:
+    restic_effective_jobs: "{{ restic_effective_jobs + [restic_job_normalized] }}"
+  loop: "{{ restic_backup_jobs | default([]) }}"
+  loop_control:
+    label: "{{ item.name | default('unnamed-job') }}"
+  vars:
+    restic_job_contributions: "{{ restic_backup_contributions | default([]) | selectattr('job', 'equalto', item.name) | list }}"
+    restic_job_normalized:
+      name: "{{ item.name | default('') | string }}"
+      paths: >-
+        {{
+          (
+            (item.paths | default([]))
+            + (restic_job_contributions | map(attribute='paths') | select('defined') | list | sum(start=[]))
+          ) | unique
+        }}
+      excludes: >-
+        {{
+          (
+            (item.excludes | default([]))
+            + (restic_job_contributions | map(attribute='excludes') | select('defined') | list | sum(start=[]))
+          ) | unique
+        }}
+      pre_commands: >-
+        {{
+          (item.pre_commands | default([]))
+          + (restic_job_contributions | map(attribute='pre_commands') | select('defined') | list | sum(start=[]))
+        }}
+      post_commands: >-
+        {{
+          (item.post_commands | default([]))
+          + (restic_job_contributions | map(attribute='post_commands') | select('defined') | list | sum(start=[]))
+        }}
+      tags: >-
+        {{
+          (
+            (item.tags | default([]))
+            + (restic_job_contributions | map(attribute='tags') | select('defined') | list | sum(start=[]))
+          ) | unique
+        }}
+      target_names: "{{ (item.target_names | default(restic_effective_target_names)) | unique }}"
+      backup_schedule: "{{ item.backup_schedule | default(restic_default_backup_schedule) | string }}"
+      backup_randomized_delay: "{{ item.backup_randomized_delay | default(restic_default_backup_randomized_delay) | string }}"
+      maintenance_schedule: "{{ item.maintenance_schedule | default(restic_default_maintenance_schedule) | string }}"
+      maintenance_randomized_delay: "{{ item.maintenance_randomized_delay | default(restic_default_maintenance_randomized_delay) | string }}"
+      retention_daily: "{{ item.retention_daily | default(restic_default_retention_daily) | int }}"
+      retention_weekly: "{{ item.retention_weekly | default(restic_default_retention_weekly) | int }}"
+      retention_monthly: "{{ item.retention_monthly | default(restic_default_retention_monthly) | int }}"
+  when: item.enabled | default(true) | bool
+
+- name: Build effective job-target pairs
+  ansible.builtin.set_fact:
+    restic_effective_pairs: "{{ restic_effective_pairs + [restic_pair] }}"
+    restic_desired_unit_paths: "{{ restic_desired_unit_paths + restic_pair_unit_paths }}"
+  loop: "{{ restic_effective_jobs | subelements('target_names') }}"
+  loop_control:
+    label: "{{ item.0.name }} -> {{ item.1 }}"
+  vars:
+    restic_pair:
+      job_name: "{{ item.0.name }}"
+      target_name: "{{ item.1 }}"
+      backup_service_unit: "crownops-restic-backup-{{ item.0.name }}-{{ item.1 }}.service"
+      backup_timer_unit: "crownops-restic-backup-{{ item.0.name }}-{{ item.1 }}.timer"
+      maintenance_service_unit: "crownops-restic-maintain-{{ item.0.name }}-{{ item.1 }}.service"
+      maintenance_timer_unit: "crownops-restic-maintain-{{ item.0.name }}-{{ item.1 }}.timer"
+    restic_pair_unit_paths:
+      - "/etc/systemd/system/crownops-restic-backup-{{ item.0.name }}-{{ item.1 }}.service"
+      - "/etc/systemd/system/crownops-restic-backup-{{ item.0.name }}-{{ item.1 }}.timer"
+      - "/etc/systemd/system/crownops-restic-maintain-{{ item.0.name }}-{{ item.1 }}.service"
+      - "/etc/systemd/system/crownops-restic-maintain-{{ item.0.name }}-{{ item.1 }}.timer"

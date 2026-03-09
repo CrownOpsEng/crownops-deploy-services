@@ -1,246 +1,269 @@
 ---
-- name: Validate required restic backup variables
-  ansible.builtin.assert:
-    that:
-      - restic_repo_primary is defined
-      - restic_repo_secondary is defined
-      - restic_password_primary is defined
-      - restic_password_secondary is defined
-      - restic_backup_paths is defined
-    fail_msg: "restic_host_backups requires repository, password, and backup path variables from the consuming site repo."
+- name: Configure restic host backups
+  when: restic_enabled | bool
+  block:
+    - name: Compose effective backup configuration
+      ansible.builtin.import_tasks: compose.yml
 
-- name: Assert primary SSH known_hosts is provided with a primary SSH key
-  ansible.builtin.assert:
-    that:
-      - (restic_primary_ssh_known_hosts | string | trim) != ""
-    fail_msg: "Set restic_primary_ssh_known_hosts when restic_primary_ssh_private_key is used."
-  when:
-    - (restic_primary_ssh_private_key | string | trim) != ""
-    - (restic_primary_sftp_command | string | trim) == ""
+    - name: Validate effective backup configuration
+      ansible.builtin.import_tasks: validate.yml
 
-- name: Assert secondary SSH known_hosts is provided with a secondary SSH key
-  ansible.builtin.assert:
-    that:
-      - (restic_secondary_ssh_known_hosts | string | trim) != ""
-    fail_msg: "Set restic_secondary_ssh_known_hosts when restic_secondary_ssh_private_key is used."
-  when:
-    - (restic_secondary_ssh_private_key | string | trim) != ""
-    - (restic_secondary_sftp_command | string | trim) == ""
+    - name: Install restic package
+      ansible.builtin.apt:
+        name: "{{ restic_package_name }}"
+        state: present
+        update_cache: true
+      when: restic_install_package | bool
 
-- name: Install restic package
-  ansible.builtin.apt:
-    name: restic
-    state: present
-    update_cache: true
+    - name: Ensure backup working directories exist
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: root
+        group: root
+        mode: '0700'
+      loop:
+        - "{{ restic_backup_root }}"
+        - "{{ restic_targets_dir }}"
+        - "{{ restic_jobs_dir }}"
+        - "{{ restic_passwords_dir }}"
 
-- name: Create restic SSH directory when key material is provided
-  ansible.builtin.file:
-    path: "{{ restic_ssh_dir }}"
-    state: directory
-    owner: root
-    group: root
-    mode: '0700'
-  when:
-    - (restic_primary_ssh_private_key | string | trim) != "" or (restic_secondary_ssh_private_key | string | trim) != ""
+    - name: Ensure restic SSH directory exists when key material is configured
+      ansible.builtin.file:
+        path: "{{ restic_ssh_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: '0700'
+      when: (restic_effective_targets | selectattr('ssh_private_key', 'truthy') | list | length) > 0
 
-- name: Create backup working directory
-  ansible.builtin.file:
-    path: "{{ restic_backup_root }}"
-    state: directory
-    owner: root
-    group: root
-    mode: '0700'
+    - name: Render restic target SSH private keys
+      ansible.builtin.copy:
+        dest: "{{ restic_ssh_dir }}/{{ item.name }}.key"
+        content: "{{ item.ssh_private_key }}"
+        owner: root
+        group: root
+        mode: '0600'
+      no_log: true
+      loop: "{{ restic_effective_targets }}"
+      loop_control:
+        label: "{{ item.name }}"
+      when: (item.ssh_private_key | length) > 0
 
-- name: Render primary backup SSH private key
-  ansible.builtin.copy:
-    dest: "{{ restic_ssh_dir }}/primary.key"
-    content: "{{ restic_primary_ssh_private_key }}"
-    owner: root
-    group: root
-    mode: '0600'
-  no_log: true
-  when: (restic_primary_ssh_private_key | string | trim) != ""
+    - name: Render restic target known_hosts files
+      ansible.builtin.copy:
+        dest: "{{ restic_ssh_dir }}/{{ item.name }}_known_hosts"
+        content: "{{ item.ssh_known_hosts }}"
+        owner: root
+        group: root
+        mode: '0600'
+      no_log: true
+      loop: "{{ restic_effective_targets }}"
+      loop_control:
+        label: "{{ item.name }}"
+      when: (item.ssh_known_hosts | length) > 0
 
-- name: Render primary backup known_hosts
-  ansible.builtin.copy:
-    dest: "{{ restic_ssh_dir }}/primary_known_hosts"
-    content: "{{ restic_primary_ssh_known_hosts }}"
-    owner: root
-    group: root
-    mode: '0600'
-  no_log: true
-  when: (restic_primary_ssh_known_hosts | string | trim) != ""
+    - name: Render restic password files
+      ansible.builtin.copy:
+        dest: "{{ restic_passwords_dir }}/{{ item.name }}.password"
+        content: "{{ item.password }}\n"
+        owner: root
+        group: root
+        mode: '0600'
+      no_log: true
+      loop: "{{ restic_effective_targets }}"
+      loop_control:
+        label: "{{ item.name }}"
 
-- name: Render secondary backup SSH private key
-  ansible.builtin.copy:
-    dest: "{{ restic_ssh_dir }}/secondary.key"
-    content: "{{ restic_secondary_ssh_private_key }}"
-    owner: root
-    group: root
-    mode: '0600'
-  no_log: true
-  when: (restic_secondary_ssh_private_key | string | trim) != ""
+    - name: Render restic target env files
+      ansible.builtin.template:
+        src: restic-target.env.j2
+        dest: "{{ restic_targets_dir }}/{{ item.name }}.env"
+        owner: root
+        group: root
+        mode: '0600'
+      no_log: true
+      loop: "{{ restic_effective_targets }}"
+      loop_control:
+        label: "{{ item.name }}"
+      vars:
+        restic_target: "{{ item }}"
+        restic_target_password_file_path: "{{ restic_passwords_dir }}/{{ item.name }}.password"
 
-- name: Render secondary backup known_hosts
-  ansible.builtin.copy:
-    dest: "{{ restic_ssh_dir }}/secondary_known_hosts"
-    content: "{{ restic_secondary_ssh_known_hosts }}"
-    owner: root
-    group: root
-    mode: '0600'
-  no_log: true
-  when: (restic_secondary_ssh_known_hosts | string | trim) != ""
+    - name: Render restic job config files
+      ansible.builtin.template:
+        src: restic-job.sh.j2
+        dest: "{{ restic_jobs_dir }}/{{ item.name }}.sh"
+        owner: root
+        group: root
+        mode: '0600'
+      loop: "{{ restic_effective_jobs }}"
+      loop_control:
+        label: "{{ item.name }}"
+      vars:
+        restic_job: "{{ item }}"
 
-- name: Derive effective primary restic SFTP command
-  ansible.builtin.set_fact:
-    restic_primary_sftp_command_effective: >-
-      {{ restic_primary_sftp_command
-         if (restic_primary_sftp_command | string | trim) != ""
-         else ('ssh -i ' ~ restic_ssh_dir ~ '/primary.key -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=' ~ restic_ssh_dir ~ '/primary_known_hosts -o GlobalKnownHostsFile=/dev/null -s sftp')
-         if (restic_primary_ssh_private_key | string | trim) != ""
-         else '' }}
+    - name: Render generic restic backup runner
+      ansible.builtin.template:
+        src: restic-backup.sh.j2
+        dest: "{{ restic_backup_script_path }}"
+        owner: root
+        group: root
+        mode: '0750'
 
-- name: Derive effective secondary restic SFTP command
-  ansible.builtin.set_fact:
-    restic_secondary_sftp_command_effective: >-
-      {{ restic_secondary_sftp_command
-         if (restic_secondary_sftp_command | string | trim) != ""
-         else ('ssh -i ' ~ restic_ssh_dir ~ '/secondary.key -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=' ~ restic_ssh_dir ~ '/secondary_known_hosts -o GlobalKnownHostsFile=/dev/null -s sftp')
-         if (restic_secondary_ssh_private_key | string | trim) != ""
-         else '' }}
+    - name: Render generic restic maintenance runner
+      ansible.builtin.template:
+        src: restic-maintain.sh.j2
+        dest: "{{ restic_maintain_script_path }}"
+        owner: root
+        group: root
+        mode: '0750'
 
-- name: Render primary restic env
-  ansible.builtin.template:
-    src: restic-primary.env.j2
-    dest: "{{ restic_backup_root }}/restic-primary.env"
-    owner: root
-    group: root
-    mode: '0600'
-  no_log: true
+    - name: Find existing managed systemd unit files
+      ansible.builtin.find:
+        paths: /etc/systemd/system
+        patterns:
+          - "crownops-restic-backup-*.service"
+          - "crownops-restic-backup-*.timer"
+          - "crownops-restic-maintain-*.service"
+          - "crownops-restic-maintain-*.timer"
+        file_type: file
+      register: restic_existing_unit_files
 
-- name: Render secondary restic env
-  ansible.builtin.template:
-    src: restic-secondary.env.j2
-    dest: "{{ restic_backup_root }}/restic-secondary.env"
-    owner: root
-    group: root
-    mode: '0600'
-  no_log: true
+    - name: Disable stale managed timer units
+      ansible.builtin.systemd:
+        name: "{{ item.path | basename }}"
+        enabled: false
+        state: stopped
+      loop: "{{ restic_existing_unit_files.files | default([]) }}"
+      loop_control:
+        label: "{{ item.path | basename }}"
+      when:
+        - item.path.endswith('.timer')
+        - item.path not in restic_desired_unit_paths
+      failed_when: false
 
-- name: Render backup script
-  ansible.builtin.template:
-    src: restic-backup.sh.j2
-    dest: "{{ restic_backup_script_path }}"
-    owner: root
-    group: root
-    mode: '0750'
+    - name: Remove stale managed unit files
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ restic_existing_unit_files.files | default([]) }}"
+      loop_control:
+        label: "{{ item.path | basename }}"
+      when: item.path not in restic_desired_unit_paths
 
-- name: Render maintenance script
-  ansible.builtin.template:
-    src: restic-maintain.sh.j2
-    dest: "{{ restic_maintain_script_path }}"
-    owner: root
-    group: root
-    mode: '0750'
+    - name: Render per-job backup systemd services
+      ansible.builtin.copy:
+        dest: "/etc/systemd/system/{{ item.backup_service_unit }}"
+        owner: root
+        group: root
+        mode: '0644'
+        content: |
+          [Unit]
+          Description=CrownOps restic backup job {{ item.job_name }} to {{ item.target_name }}
+          After=network-online.target
+          Wants=network-online.target
 
-- name: Install backup systemd service
-  ansible.builtin.copy:
-    dest: /etc/systemd/system/crownops-restic-backup@.service
-    owner: root
-    group: root
-    mode: '0644'
-    content: |
-      [Unit]
-      Description=CrownOps restic backup (%i)
-      After=network-online.target
-      Wants=network-online.target
+          [Service]
+          Type=oneshot
+          ExecStart={{ restic_backup_script_path }} {{ item.target_name }} {{ item.job_name }}
+          Nice=10
+          IOSchedulingClass=best-effort
+          IOSchedulingPriority=7
+          NoNewPrivileges=yes
+          PrivateTmp=yes
+          TimeoutStartSec=12h
+      loop: "{{ restic_effective_pairs }}"
+      loop_control:
+        label: "{{ item.backup_service_unit }}"
 
-      [Service]
-      Type=oneshot
-      ExecStart={{ restic_backup_script_path }} %i
+    - name: Render per-job backup systemd timers
+      ansible.builtin.copy:
+        dest: "/etc/systemd/system/{{ item.backup_timer_unit }}"
+        owner: root
+        group: root
+        mode: '0644'
+        content: |
+          [Unit]
+          Description=CrownOps restic backup timer {{ item.job_name }} to {{ item.target_name }}
 
-      [Install]
-      WantedBy=multi-user.target
+          [Timer]
+          OnCalendar={{ restic_effective_jobs | selectattr('name', 'equalto', item.job_name) | map(attribute='backup_schedule') | first }}
+          Persistent=true
+          RandomizedDelaySec={{ restic_effective_jobs | selectattr('name', 'equalto', item.job_name) | map(attribute='backup_randomized_delay') | first }}
+          Unit={{ item.backup_service_unit }}
 
-- name: Install backup systemd timer
-  ansible.builtin.copy:
-    dest: /etc/systemd/system/crownops-restic-backup@.timer
-    owner: root
-    group: root
-    mode: '0644'
-    content: |
-      [Unit]
-      Description=CrownOps restic backup timer (%i)
+          [Install]
+          WantedBy=timers.target
+      loop: "{{ restic_effective_pairs }}"
+      loop_control:
+        label: "{{ item.backup_timer_unit }}"
 
-      [Timer]
-      OnCalendar={{ restic_backup_schedule }}
-      Persistent=true
-      RandomizedDelaySec={{ restic_backup_randomized_delay }}
+    - name: Render per-job maintenance systemd services
+      ansible.builtin.copy:
+        dest: "/etc/systemd/system/{{ item.maintenance_service_unit }}"
+        owner: root
+        group: root
+        mode: '0644'
+        content: |
+          [Unit]
+          Description=CrownOps restic maintenance job {{ item.job_name }} on {{ item.target_name }}
+          After=network-online.target
+          Wants=network-online.target
 
-      [Install]
-      WantedBy=timers.target
+          [Service]
+          Type=oneshot
+          ExecStart={{ restic_maintain_script_path }} {{ item.target_name }} {{ item.job_name }}
+          Nice=10
+          IOSchedulingClass=best-effort
+          IOSchedulingPriority=7
+          NoNewPrivileges=yes
+          PrivateTmp=yes
+          TimeoutStartSec=12h
+      loop: "{{ restic_effective_pairs }}"
+      loop_control:
+        label: "{{ item.maintenance_service_unit }}"
 
-- name: Install maintenance systemd service
-  ansible.builtin.copy:
-    dest: /etc/systemd/system/crownops-restic-maintain@.service
-    owner: root
-    group: root
-    mode: '0644'
-    content: |
-      [Unit]
-      Description=CrownOps restic maintenance (%i)
-      After=network-online.target
-      Wants=network-online.target
+    - name: Render per-job maintenance systemd timers
+      ansible.builtin.copy:
+        dest: "/etc/systemd/system/{{ item.maintenance_timer_unit }}"
+        owner: root
+        group: root
+        mode: '0644'
+        content: |
+          [Unit]
+          Description=CrownOps restic maintenance timer {{ item.job_name }} on {{ item.target_name }}
 
-      [Service]
-      Type=oneshot
-      ExecStart={{ restic_maintain_script_path }} %i
+          [Timer]
+          OnCalendar={{ restic_effective_jobs | selectattr('name', 'equalto', item.job_name) | map(attribute='maintenance_schedule') | first }}
+          Persistent=true
+          RandomizedDelaySec={{ restic_effective_jobs | selectattr('name', 'equalto', item.job_name) | map(attribute='maintenance_randomized_delay') | first }}
+          Unit={{ item.maintenance_service_unit }}
 
-      [Install]
-      WantedBy=multi-user.target
+          [Install]
+          WantedBy=timers.target
+      loop: "{{ restic_effective_pairs }}"
+      loop_control:
+        label: "{{ item.maintenance_timer_unit }}"
 
-- name: Install maintenance systemd timer
-  ansible.builtin.copy:
-    dest: /etc/systemd/system/crownops-restic-maintain@.timer
-    owner: root
-    group: root
-    mode: '0644'
-    content: |
-      [Unit]
-      Description=CrownOps restic maintenance timer (%i)
+    - name: Reload systemd after unit updates
+      ansible.builtin.systemd:
+        daemon_reload: true
 
-      [Timer]
-      OnCalendar={{ restic_maintenance_schedule }}
-      Persistent=true
-      RandomizedDelaySec={{ restic_maintenance_randomized_delay }}
+    - name: Enable and start backup timers
+      ansible.builtin.systemd:
+        name: "{{ item.backup_timer_unit }}"
+        enabled: true
+        state: started
+      loop: "{{ restic_effective_pairs }}"
+      loop_control:
+        label: "{{ item.backup_timer_unit }}"
 
-      [Install]
-      WantedBy=timers.target
-
-- name: Reload systemd
-  ansible.builtin.systemd:
-    daemon_reload: true
-
-- name: Enable primary backup timer
-  ansible.builtin.systemd:
-    name: crownops-restic-backup@primary.timer
-    enabled: true
-    state: started
-
-- name: Enable secondary backup timer
-  ansible.builtin.systemd:
-    name: crownops-restic-backup@secondary.timer
-    enabled: true
-    state: started
-
-- name: Enable primary maintenance timer
-  ansible.builtin.systemd:
-    name: crownops-restic-maintain@primary.timer
-    enabled: true
-    state: started
-
-- name: Enable secondary maintenance timer
-  ansible.builtin.systemd:
-    name: crownops-restic-maintain@secondary.timer
-    enabled: true
-    state: started
+    - name: Enable and start maintenance timers
+      ansible.builtin.systemd:
+        name: "{{ item.maintenance_timer_unit }}"
+        enabled: true
+        state: started
+      loop: "{{ restic_effective_pairs }}"
+      loop_control:
+        label: "{{ item.maintenance_timer_unit }}"
