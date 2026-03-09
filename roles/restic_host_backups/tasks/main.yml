@@ -9,11 +9,39 @@
       - restic_backup_paths is defined
     fail_msg: "restic_host_backups requires repository, password, and backup path variables from the consuming site repo."
 
+- name: Assert primary SSH known_hosts is provided with a primary SSH key
+  ansible.builtin.assert:
+    that:
+      - (restic_primary_ssh_known_hosts | string | trim) != ""
+    fail_msg: "Set restic_primary_ssh_known_hosts when restic_primary_ssh_private_key is used."
+  when:
+    - (restic_primary_ssh_private_key | string | trim) != ""
+    - (restic_primary_sftp_command | string | trim) == ""
+
+- name: Assert secondary SSH known_hosts is provided with a secondary SSH key
+  ansible.builtin.assert:
+    that:
+      - (restic_secondary_ssh_known_hosts | string | trim) != ""
+    fail_msg: "Set restic_secondary_ssh_known_hosts when restic_secondary_ssh_private_key is used."
+  when:
+    - (restic_secondary_ssh_private_key | string | trim) != ""
+    - (restic_secondary_sftp_command | string | trim) == ""
+
 - name: Install restic package
   ansible.builtin.apt:
     name: restic
     state: present
     update_cache: true
+
+- name: Create restic SSH directory when key material is provided
+  ansible.builtin.file:
+    path: "{{ restic_ssh_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0700'
+  when:
+    - (restic_primary_ssh_private_key | string | trim) != "" or (restic_secondary_ssh_private_key | string | trim) != ""
 
 - name: Create backup working directory
   ansible.builtin.file:
@@ -22,6 +50,64 @@
     owner: root
     group: root
     mode: '0700'
+
+- name: Render primary backup SSH private key
+  ansible.builtin.copy:
+    dest: "{{ restic_ssh_dir }}/primary.key"
+    content: "{{ restic_primary_ssh_private_key }}"
+    owner: root
+    group: root
+    mode: '0600'
+  no_log: true
+  when: (restic_primary_ssh_private_key | string | trim) != ""
+
+- name: Render primary backup known_hosts
+  ansible.builtin.copy:
+    dest: "{{ restic_ssh_dir }}/primary_known_hosts"
+    content: "{{ restic_primary_ssh_known_hosts }}"
+    owner: root
+    group: root
+    mode: '0600'
+  no_log: true
+  when: (restic_primary_ssh_known_hosts | string | trim) != ""
+
+- name: Render secondary backup SSH private key
+  ansible.builtin.copy:
+    dest: "{{ restic_ssh_dir }}/secondary.key"
+    content: "{{ restic_secondary_ssh_private_key }}"
+    owner: root
+    group: root
+    mode: '0600'
+  no_log: true
+  when: (restic_secondary_ssh_private_key | string | trim) != ""
+
+- name: Render secondary backup known_hosts
+  ansible.builtin.copy:
+    dest: "{{ restic_ssh_dir }}/secondary_known_hosts"
+    content: "{{ restic_secondary_ssh_known_hosts }}"
+    owner: root
+    group: root
+    mode: '0600'
+  no_log: true
+  when: (restic_secondary_ssh_known_hosts | string | trim) != ""
+
+- name: Derive effective primary restic SFTP command
+  ansible.builtin.set_fact:
+    restic_primary_sftp_command_effective: >-
+      {{ restic_primary_sftp_command
+         if (restic_primary_sftp_command | string | trim) != ""
+         else ('ssh -i ' ~ restic_ssh_dir ~ '/primary.key -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=' ~ restic_ssh_dir ~ '/primary_known_hosts -o GlobalKnownHostsFile=/dev/null -s sftp')
+         if (restic_primary_ssh_private_key | string | trim) != ""
+         else '' }}
+
+- name: Derive effective secondary restic SFTP command
+  ansible.builtin.set_fact:
+    restic_secondary_sftp_command_effective: >-
+      {{ restic_secondary_sftp_command
+         if (restic_secondary_sftp_command | string | trim) != ""
+         else ('ssh -i ' ~ restic_ssh_dir ~ '/secondary.key -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=' ~ restic_ssh_dir ~ '/secondary_known_hosts -o GlobalKnownHostsFile=/dev/null -s sftp')
+         if (restic_secondary_ssh_private_key | string | trim) != ""
+         else '' }}
 
 - name: Render primary restic env
   ansible.builtin.template:

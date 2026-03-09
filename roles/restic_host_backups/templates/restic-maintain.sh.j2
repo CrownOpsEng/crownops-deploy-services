@@ -14,7 +14,12 @@ case "$TARGET" in
     ;;
 esac
 
-restic forget --prune \
+RESTIC_ARGS=()
+if [[ -n "${RESTIC_SFTP_COMMAND:-}" ]]; then
+  RESTIC_ARGS+=(-o "sftp.command=${RESTIC_SFTP_COMMAND}")
+fi
+
+restic "${RESTIC_ARGS[@]}" forget --prune \
   --keep-daily {{ restic_retention_daily }} \
   --keep-weekly {{ restic_retention_weekly }} \
   --keep-monthly {{ restic_retention_monthly }}

@@ -15,6 +15,13 @@ Current public roles:
 - `crownops.deploy_services.obsidian_livesync`
 - `crownops.deploy_services.restic_host_backups`
 
+Current capabilities:
+- Traefik + CouchDB LiveSync deployment for Obsidian
+- automated CouchDB user, database, and security bootstrap
+- restic backup scripts and timers
+- optional SSH-key-based SFTP backup transport
+- optional pre/post backup hooks for service quiesce
+
 Read first:
 - `docs/ARCHITECTURE.md`
 - `docs/QUICKSTART.md`

@@ -6,3 +6,15 @@ restic_backup_schedule: "*-*-* 03:30:00"
 restic_backup_randomized_delay: 15m
 restic_maintenance_schedule: "Sun *-*-* 05:30:00"
 restic_maintenance_randomized_delay: 30m
+restic_ssh_dir: "{{ restic_backup_root }}/ssh"
+
+restic_primary_ssh_private_key: ""
+restic_primary_ssh_known_hosts: ""
+restic_primary_sftp_command: ""
+
+restic_secondary_ssh_private_key: ""
+restic_secondary_ssh_known_hosts: ""
+restic_secondary_sftp_command: ""
+
+restic_pre_backup_commands: []
+restic_post_backup_commands: []

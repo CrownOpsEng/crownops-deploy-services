@@ -42,3 +42,86 @@
   community.docker.docker_compose_v2:
     project_src: "{{ couchdb_dir }}"
     state: present
+
+- name: Wait for local CouchDB admin endpoint
+  ansible.builtin.uri:
+    url: "http://{{ couchdb_bind_host }}:{{ couchdb_port }}/_up"
+    user: "{{ couchdb_admin_user }}"
+    password: "{{ couchdb_admin_password }}"
+    force_basic_auth: true
+    status_code: 200
+  register: obsidian_couchdb_up
+  retries: 30
+  delay: 2
+  until: obsidian_couchdb_up.status == 200
+  no_log: true
+
+- name: Read existing CouchDB user documents
+  ansible.builtin.uri:
+    url: "http://{{ couchdb_bind_host }}:{{ couchdb_port }}/_users/org.couchdb.user:{{ item.user }}"
+    user: "{{ couchdb_admin_user }}"
+    password: "{{ couchdb_admin_password }}"
+    force_basic_auth: true
+    status_code:
+      - 200
+      - 404
+  loop: "{{ couchdb_vaults }}"
+  register: obsidian_couchdb_user_docs
+  no_log: true
+
+- name: Ensure CouchDB users exist with expected passwords
+  ansible.builtin.uri:
+    url: "http://{{ couchdb_bind_host }}:{{ couchdb_port }}/_users/org.couchdb.user:{{ item.item.user }}"
+    method: PUT
+    user: "{{ couchdb_admin_user }}"
+    password: "{{ couchdb_admin_password }}"
+    force_basic_auth: true
+    body_format: json
+    body:
+      _id: "org.couchdb.user:{{ item.item.user }}"
+      _rev: "{{ item.json._rev if item.status == 200 else omit }}"
+      name: "{{ item.item.user }}"
+      password: "{{ item.item.password }}"
+      roles: []
+      type: user
+    status_code:
+      - 201
+      - 202
+  loop: "{{ obsidian_couchdb_user_docs.results }}"
+  no_log: true
+
+- name: Ensure CouchDB databases exist
+  ansible.builtin.uri:
+    url: "http://{{ couchdb_bind_host }}:{{ couchdb_port }}/{{ item.db_name }}"
+    method: PUT
+    user: "{{ couchdb_admin_user }}"
+    password: "{{ couchdb_admin_password }}"
+    force_basic_auth: true
+    status_code:
+      - 201
+      - 412
+  loop: "{{ couchdb_vaults }}"
+  no_log: true
+
+- name: Apply CouchDB security objects
+  ansible.builtin.uri:
+    url: "http://{{ couchdb_bind_host }}:{{ couchdb_port }}/{{ item.db_name }}/_security"
+    method: PUT
+    user: "{{ couchdb_admin_user }}"
+    password: "{{ couchdb_admin_password }}"
+    force_basic_auth: true
+    body_format: json
+    body:
+      admins:
+        names:
+          - "{{ item.user }}"
+        roles: []
+      members:
+        names:
+          - "{{ item.user }}"
+        roles: []
+    status_code:
+      - 200
+      - 201
+  loop: "{{ couchdb_vaults }}"
+  no_log: true

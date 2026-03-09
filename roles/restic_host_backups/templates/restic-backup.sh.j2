@@ -14,5 +14,22 @@ case "$TARGET" in
     ;;
 esac
 
-restic snapshots >/dev/null 2>&1 || restic init
-restic backup {% for p in restic_backup_paths %} {{ p }}{% endfor %}
+RESTIC_ARGS=()
+if [[ -n "${RESTIC_SFTP_COMMAND:-}" ]]; then
+  RESTIC_ARGS+=(-o "sftp.command=${RESTIC_SFTP_COMMAND}")
+fi
+
+cleanup() {
+{% for cmd in restic_post_backup_commands %}
+  {{ cmd }}
+{% endfor %}
+}
+
+trap cleanup EXIT
+
+{% for cmd in restic_pre_backup_commands %}
+{{ cmd }}
+{% endfor %}
+
+restic "${RESTIC_ARGS[@]}" snapshots >/dev/null 2>&1 || restic "${RESTIC_ARGS[@]}" init
+restic "${RESTIC_ARGS[@]}" backup {% for p in restic_backup_paths %} {{ p }}{% endfor %}

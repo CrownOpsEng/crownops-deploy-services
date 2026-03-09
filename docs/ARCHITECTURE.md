@@ -15,6 +15,7 @@ This collection is the place for:
 - reusable service stacks
 - reusable host-level backup capabilities
 - shared compose-based service deployment logic
+- application-aware bootstrap and backup hooks that belong to a reusable stack
 
 This collection is not the place for:
 - site inventory
