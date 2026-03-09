@@ -13,6 +13,7 @@ ansible-playbook --syntax-check -i examples/inventory/hosts.yml playbooks/backup
 Consuming repos should install this collection from GitHub via `ansible-galaxy collection install`.
 
 Role notes:
+
 - `obsidian_livesync` bootstraps CouchDB users, databases, and security objects automatically
 - `restic_host_backups` supports SSH-key-backed SFTP by rendering key and known_hosts material from inventory variables
 - `restic_host_backups` also supports pre/post backup command hooks for small-scope service quiesce
