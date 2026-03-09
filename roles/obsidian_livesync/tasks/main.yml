@@ -1,0 +1,21 @@
+---
+- name: Validate required Obsidian stack variables
+  ansible.builtin.assert:
+    that:
+      - traefik_dir is defined
+      - couchdb_dir is defined
+      - ops_domain is defined
+      - obsidian_service_subdomain is defined
+      - couchdb_vaults is defined
+      - couchdb_admin_user is defined
+      - couchdb_admin_password is defined
+    fail_msg: "obsidian_livesync requires Traefik, CouchDB, and vault variables to be defined by the consuming site repo."
+
+- name: Apply Traefik portion of the Obsidian stack
+  ansible.builtin.import_tasks: traefik.yml
+
+- name: Apply CouchDB portion of the Obsidian stack
+  ansible.builtin.import_tasks: couchdb.yml
+
+- name: Render Obsidian handoff outputs
+  ansible.builtin.import_tasks: handoff.yml

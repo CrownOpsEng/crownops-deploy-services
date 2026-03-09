@@ -1,0 +1,160 @@
+---
+- name: Validate required restic backup variables
+  ansible.builtin.assert:
+    that:
+      - restic_repo_primary is defined
+      - restic_repo_secondary is defined
+      - restic_password_primary is defined
+      - restic_password_secondary is defined
+      - restic_backup_paths is defined
+    fail_msg: "restic_host_backups requires repository, password, and backup path variables from the consuming site repo."
+
+- name: Install restic package
+  ansible.builtin.apt:
+    name: restic
+    state: present
+    update_cache: true
+
+- name: Create backup working directory
+  ansible.builtin.file:
+    path: "{{ restic_backup_root }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0700'
+
+- name: Render primary restic env
+  ansible.builtin.template:
+    src: restic-primary.env.j2
+    dest: "{{ restic_backup_root }}/restic-primary.env"
+    owner: root
+    group: root
+    mode: '0600'
+  no_log: true
+
+- name: Render secondary restic env
+  ansible.builtin.template:
+    src: restic-secondary.env.j2
+    dest: "{{ restic_backup_root }}/restic-secondary.env"
+    owner: root
+    group: root
+    mode: '0600'
+  no_log: true
+
+- name: Render backup script
+  ansible.builtin.template:
+    src: restic-backup.sh.j2
+    dest: "{{ restic_backup_script_path }}"
+    owner: root
+    group: root
+    mode: '0750'
+
+- name: Render maintenance script
+  ansible.builtin.template:
+    src: restic-maintain.sh.j2
+    dest: "{{ restic_maintain_script_path }}"
+    owner: root
+    group: root
+    mode: '0750'
+
+- name: Install backup systemd service
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/crownops-restic-backup@.service
+    owner: root
+    group: root
+    mode: '0644'
+    content: |
+      [Unit]
+      Description=CrownOps restic backup (%i)
+      After=network-online.target
+      Wants=network-online.target
+
+      [Service]
+      Type=oneshot
+      ExecStart={{ restic_backup_script_path }} %i
+
+      [Install]
+      WantedBy=multi-user.target
+
+- name: Install backup systemd timer
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/crownops-restic-backup@.timer
+    owner: root
+    group: root
+    mode: '0644'
+    content: |
+      [Unit]
+      Description=CrownOps restic backup timer (%i)
+
+      [Timer]
+      OnCalendar={{ restic_backup_schedule }}
+      Persistent=true
+      RandomizedDelaySec={{ restic_backup_randomized_delay }}
+
+      [Install]
+      WantedBy=timers.target
+
+- name: Install maintenance systemd service
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/crownops-restic-maintain@.service
+    owner: root
+    group: root
+    mode: '0644'
+    content: |
+      [Unit]
+      Description=CrownOps restic maintenance (%i)
+      After=network-online.target
+      Wants=network-online.target
+
+      [Service]
+      Type=oneshot
+      ExecStart={{ restic_maintain_script_path }} %i
+
+      [Install]
+      WantedBy=multi-user.target
+
+- name: Install maintenance systemd timer
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/crownops-restic-maintain@.timer
+    owner: root
+    group: root
+    mode: '0644'
+    content: |
+      [Unit]
+      Description=CrownOps restic maintenance timer (%i)
+
+      [Timer]
+      OnCalendar={{ restic_maintenance_schedule }}
+      Persistent=true
+      RandomizedDelaySec={{ restic_maintenance_randomized_delay }}
+
+      [Install]
+      WantedBy=timers.target
+
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Enable primary backup timer
+  ansible.builtin.systemd:
+    name: crownops-restic-backup@primary.timer
+    enabled: true
+    state: started
+
+- name: Enable secondary backup timer
+  ansible.builtin.systemd:
+    name: crownops-restic-backup@secondary.timer
+    enabled: true
+    state: started
+
+- name: Enable primary maintenance timer
+  ansible.builtin.systemd:
+    name: crownops-restic-maintain@primary.timer
+    enabled: true
+    state: started
+
+- name: Enable secondary maintenance timer
+  ansible.builtin.systemd:
+    name: crownops-restic-maintain@secondary.timer
+    enabled: true
+    state: started

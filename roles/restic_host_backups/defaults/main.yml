@@ -1,1 +1,8 @@
 ---
+restic_backup_root: /opt/crownops-backup
+restic_backup_script_path: /usr/local/sbin/crownops-restic-backup
+restic_maintain_script_path: /usr/local/sbin/crownops-restic-maintain
+restic_backup_schedule: "*-*-* 03:30:00"
+restic_backup_randomized_delay: 15m
+restic_maintenance_schedule: "Sun *-*-* 05:30:00"
+restic_maintenance_randomized_delay: 30m
