@@ -27,6 +27,14 @@
     group: root
     mode: '0644'
 
+- name: Render Traefik dynamic CouchDB route
+  ansible.builtin.template:
+    src: obsidian-couchdb.yml.j2
+    dest: "{{ traefik_dir }}/dynamic/obsidian-couchdb.yml"
+    owner: root
+    group: root
+    mode: '0644'
+
 - name: Render Traefik docker compose
   ansible.builtin.template:
     src: traefik-docker-compose.yml.j2

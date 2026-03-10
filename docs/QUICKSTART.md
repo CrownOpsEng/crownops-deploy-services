@@ -16,6 +16,7 @@ Role notes:
 
 - `obsidian_livesync` bootstraps CouchDB users, databases, and security objects automatically
 - `obsidian_livesync` supports `public_https` via Traefik + ACME and `private_mesh` via a caller-supplied base URL; the consuming repo must keep CouchDB off the public firewall in `private_mesh`
+- `obsidian_livesync` renders its Traefik route through the file provider, so the stack does not need `/var/run/docker.sock`
 - `restic_host_backups` models backup policy as targets, logical jobs, and feature contributions
 - `restic_host_backups` supports SSH-key-backed SFTP and target-specific environment variables
 - `restic_host_backups` supports job-scoped pre/post backup command hooks for service quiesce

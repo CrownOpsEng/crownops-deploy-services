@@ -21,6 +21,7 @@ This collection is the place for:
 - reusable service stacks
 - reusable host-level backup capabilities
 - shared compose-based service deployment logic
+- ingress configuration that avoids handing public-facing containers direct Docker daemon access
 - application-aware bootstrap and backup hooks that belong to a reusable stack
 - backup contracts that let site repos compose host policy separately from feature data ownership
 

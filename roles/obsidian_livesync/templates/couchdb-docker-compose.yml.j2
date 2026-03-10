@@ -13,16 +13,6 @@ services:
     volumes:
       - {{ couchdb_dir }}/data:/opt/couchdb/data
       - {{ couchdb_dir }}/etc/local.ini:/opt/couchdb/etc/local.d/local.ini:ro
-{% if obsidian_access_mode == "public_https" %}
-    labels:
-      traefik.enable: "true"
-      traefik.docker.network: "{{ traefik_network_name }}"
-      traefik.http.routers.couchdb.rule: "Host(`{{ obsidian_service_subdomain }}.{{ ops_domain }}`)"
-      traefik.http.routers.couchdb.entrypoints: websecure
-      traefik.http.routers.couchdb.tls: "true"
-      traefik.http.routers.couchdb.tls.certresolver: "{{ traefik_certresolver_name }}"
-      traefik.http.services.couchdb.loadbalancer.server.port: "5984"
-{% endif %}
 networks:
   {{ internal_network_name }}:
     name: {{ internal_network_name }}
