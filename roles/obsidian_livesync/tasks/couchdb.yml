@@ -10,7 +10,6 @@
     - "{{ couchdb_dir }}"
     - "{{ couchdb_dir }}/data"
     - "{{ couchdb_dir }}/etc"
-    - "{{ couchdb_dir }}/bootstrap"
 
 - name: Render CouchDB local.ini
   ansible.builtin.template:
@@ -28,15 +27,6 @@
     owner: root
     group: root
     mode: '0644'
-
-- name: Render CouchDB bootstrap helper
-  ansible.builtin.template:
-    src: bootstrap-couchdb.sh.j2
-    dest: "{{ couchdb_dir }}/bootstrap/bootstrap-couchdb.sh"
-    owner: root
-    group: root
-    mode: '0750'
-  no_log: true
 
 - name: Deploy CouchDB stack
   community.docker.docker_compose_v2:
@@ -59,17 +49,18 @@
 - name: Ensure CouchDB system databases exist
   ansible.builtin.uri:
     url: "http://{{ couchdb_bind_host }}:{{ couchdb_port }}/{{ item }}"
-    method: PUT
     user: "{{ couchdb_admin_user }}"
     password: "{{ couchdb_admin_password }}"
     force_basic_auth: true
-    status_code:
-      - 201
-      - 412
+    status_code: 200
   loop:
     - _users
     - _replicator
     - _global_changes
+  register: obsidian_couchdb_system_dbs
+  retries: 15
+  delay: 2
+  until: obsidian_couchdb_system_dbs.status == 200
   no_log: true
 
 - name: Read existing CouchDB user documents

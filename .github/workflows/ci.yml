@@ -32,3 +32,6 @@ jobs:
 
       - name: Syntax check backup playbook
         run: ansible-playbook --syntax-check -i examples/inventory/hosts.yml playbooks/backups.yml
+
+      - name: Smoke test CouchDB single-node bootstrap
+        run: bash tests/smoke/test_couchdb_single_node_bootstrap.sh
