@@ -45,7 +45,7 @@ if [[ -z "${SYSTEM_LINE}" || -z "${USER_LINE}" || "${SETUP_WAIT_LINE}" -ge "${SY
   exit 1
 fi
 
-for db in _users _replicator _global_changes; do
+for db in _users _replicator; do
   if ! rg -n "^[[:space:]]+- ${db}$" "${TASK_FILE}" >/dev/null; then
     echo "expected ${db} to be included in the system database readiness loop" >&2
     exit 1

@@ -101,7 +101,6 @@
   loop:
     - _users
     - _replicator
-    - _global_changes
   register: obsidian_couchdb_system_dbs
   retries: 15
   delay: 2
