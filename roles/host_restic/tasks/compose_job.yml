@@ -1,0 +1,41 @@
+---
+- name: Initialize selected datasets for job
+  ansible.builtin.set_fact:
+    restic_current_selected_datasets: []
+
+- name: Select datasets for job
+  ansible.builtin.set_fact:
+    restic_current_selected_datasets: "{{ restic_current_selected_datasets + [item] }}"
+  loop: "{{ restic_effective_datasets }}"
+  loop_control:
+    label: "{{ restic_job_input.name }} <= {{ item.name }}"
+  when:
+    - item.name in (restic_job_input.dataset_names | default([]) | list)
+      or ((((restic_job_input.selector_tags | default([])) | intersect(item.tags | default([]))) | length) > 0)
+
+- name: Normalize backup job from selected datasets
+  ansible.builtin.set_fact:
+    restic_effective_jobs: "{{ restic_effective_jobs + [restic_job_normalized] }}"
+  vars:
+    restic_job_normalized:
+      name: "{{ restic_job_input.name | default('') | string }}"
+      dataset_names: "{{ restic_current_selected_datasets | map(attribute='name') | list | unique }}"
+      paths: "{{ restic_current_selected_datasets | map(attribute='paths') | list | sum(start=[]) | unique }}"
+      excludes: "{{ restic_current_selected_datasets | map(attribute='excludes') | list | sum(start=[]) | unique }}"
+      pre_commands: "{{ restic_current_selected_datasets | map(attribute='pre_commands') | list | sum(start=[]) }}"
+      post_commands: "{{ restic_current_selected_datasets | map(attribute='post_commands') | list | sum(start=[]) }}"
+      tags: >-
+        {{
+          (
+            (restic_job_input.tags | default([]))
+            + (restic_current_selected_datasets | map(attribute='tags') | list | sum(start=[]))
+          ) | unique
+        }}
+      target_names: "{{ (restic_job_input.target_names | default(restic_effective_target_names)) | unique }}"
+      backup_schedule: "{{ restic_job_input.backup_schedule | default(restic_effective_defaults.backup_schedule) | string }}"
+      backup_randomized_delay: "{{ restic_job_input.backup_randomized_delay | default(restic_effective_defaults.backup_randomized_delay) | string }}"
+      maintenance_schedule: "{{ restic_job_input.maintenance_schedule | default(restic_effective_defaults.maintenance_schedule) | string }}"
+      maintenance_randomized_delay: "{{ restic_job_input.maintenance_randomized_delay | default(restic_effective_defaults.maintenance_randomized_delay) | string }}"
+      retention_daily: "{{ restic_job_input.retention_daily | default(restic_effective_defaults.retention_daily) | int }}"
+      retention_weekly: "{{ restic_job_input.retention_weekly | default(restic_effective_defaults.retention_weekly) | int }}"
+      retention_monthly: "{{ restic_job_input.retention_monthly | default(restic_effective_defaults.retention_monthly) | int }}"

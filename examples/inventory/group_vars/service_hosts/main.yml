@@ -1,0 +1,91 @@
+---
+obsidian_livesync:
+  access_mode: public_https
+  base_url: https://notes.example.com
+  handoff_dir: /root/crownops-handoff
+  ingress:
+    shared_network_name: proxy
+  couchdb:
+    dir: /opt/couchdb
+    container_name: couchdb
+    internal_network_name: internal
+    bind_host: 127.0.0.1
+    port: 5984
+    admin_user: admin
+    admin_password: example-admin-password
+    vaults:
+      - name: Chris
+        db_name: chris
+        user: chris
+        password: example-user-password
+
+host_traefik:
+  enabled: true
+  manage_mode: managed
+  layout_root: /opt/traefik
+  static_config_path: /opt/traefik/traefik.yml
+  dynamic_config_root: /opt/traefik/dynamic
+  dynamic_routes_dir: /opt/traefik/dynamic/routes
+  acme_storage_path: /opt/traefik/acme/acme.json
+  proxy_network_name: proxy
+  container_name: traefik
+  compose_project_name: traefik
+  certificate_resolver_name: dnsresolver
+  acme_email: ops@example.com
+  dns_provider: cloudflare
+  dns_env:
+    CF_DNS_API_TOKEN: example-token
+  https_entrypoint_name: websecure
+  https_port: 443
+  log_level: INFO
+  routes:
+    - name: obsidian-couchdb
+      rule: Host(`notes.example.com`)
+      service_url: http://couchdb:5984
+
+host_restic:
+  enabled: true
+  install_package: false
+  package_name: restic
+  apt_cache_valid_time: 86400
+  backup_root: /opt/crownops-backup
+  targets_dir: /opt/crownops-backup/targets
+  jobs_dir: /opt/crownops-backup/jobs
+  passwords_dir: /opt/crownops-backup/passwords
+  backup_script_path: /usr/local/sbin/crownops-restic-backup
+  maintain_script_path: /usr/local/sbin/crownops-restic-maintain
+  ssh_dir: /opt/crownops-backup/ssh
+  targets:
+    - name: h4f
+      repository: sftp:backup@example.com:/srv/restic/service-host-01
+      password: example-target-password
+  datasets:
+    - name: couchdb-data
+      owner: obsidian_livesync
+      paths:
+        - /opt/couchdb/data
+      tags:
+        - feature:obsidian-livesync
+      quiesce:
+        pre_commands:
+          - docker compose -f /opt/couchdb/docker-compose.yml stop couchdb
+        post_commands:
+          - docker compose -f /opt/couchdb/docker-compose.yml start couchdb
+    - name: traefik-acme
+      owner: host_traefik
+      paths:
+        - /opt/traefik/acme/acme.json
+      tags:
+        - host:ingress
+  jobs:
+    - name: application-data
+      dataset_names:
+        - couchdb-data
+      target_names:
+        - h4f
+    - name: host-foundation
+      selector_tags:
+        - host:ingress
+      target_names:
+        - h4f
+  feature_owned_jobs: []

@@ -1,0 +1,45 @@
+---
+argument_specs:
+  main:
+    short_description: Configure shared host restic backups.
+    options:
+      host_restic:
+        type: dict
+        required: true
+        options:
+          enabled:
+            type: bool
+          install_package:
+            type: bool
+          package_name:
+            type: str
+          apt_cache_valid_time:
+            type: int
+          backup_root:
+            type: str
+          targets_dir:
+            type: str
+          jobs_dir:
+            type: str
+          passwords_dir:
+            type: str
+          backup_script_path:
+            type: str
+          maintain_script_path:
+            type: str
+          ssh_dir:
+            type: str
+          targets:
+            type: list
+            elements: dict
+          datasets:
+            type: list
+            elements: dict
+          jobs:
+            type: list
+            elements: dict
+          feature_owned_jobs:
+            type: list
+            elements: dict
+          defaults:
+            type: dict

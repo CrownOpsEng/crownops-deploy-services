@@ -1,0 +1,21 @@
+http:
+  routers:
+    {{ host_traefik_route.name }}:
+      rule: {{ host_traefik_route.rule | quote }}
+      entryPoints:
+{% for entrypoint in host_traefik_route.entrypoints %}
+        - {{ entrypoint }}
+{% endfor %}
+{% if host_traefik_route.priority is not none %}
+      priority: {{ host_traefik_route.priority }}
+{% endif %}
+{% if host_traefik_route.tls %}
+      tls:
+        certResolver: {{ host_traefik_route.tls_certresolver_name | quote }}
+{% endif %}
+      service: {{ host_traefik_route.name }}
+  services:
+    {{ host_traefik_route.name }}:
+      loadBalancer:
+        servers:
+          - url: {{ host_traefik_route.service_url | quote }}

@@ -30,11 +30,35 @@ jobs:
       - name: Syntax check Obsidian playbook
         run: ansible-playbook --syntax-check -i examples/inventory/hosts.yml playbooks/obsidian.yml
 
+      - name: Syntax check Traefik playbook
+        run: ansible-playbook --syntax-check -i examples/inventory/hosts.yml playbooks/traefik.yml
+
       - name: Syntax check backup playbook
         run: ansible-playbook --syntax-check -i examples/inventory/hosts.yml playbooks/backups.yml
 
+      - name: Smoke test Obsidian ownership boundaries
+        run: bash tests/smoke/test_obsidian_role_boundaries.sh
+
+      - name: Smoke test Obsidian contract validation
+        run: bash tests/smoke/test_obsidian_contract_validation.sh
+
+      - name: Smoke test host Traefik adoption contract
+        run: bash tests/smoke/test_host_traefik_adoption_contract.sh
+
+      - name: Smoke test host Traefik disabled skip path
+        run: bash tests/smoke/test_host_traefik_disabled_skip.sh
+
       - name: Smoke test CouchDB single-node bootstrap
         run: bash tests/smoke/test_couchdb_single_node_bootstrap.sh
+
+      - name: Smoke test host restic dataset contract
+        run: bash tests/smoke/test_host_restic_dataset_contract.sh
+
+      - name: Smoke test host restic SSH target validation
+        run: bash tests/smoke/test_host_restic_invalid_ssh_target_rejected.sh
+
+      - name: Smoke test host restic managed state cleanup
+        run: bash tests/smoke/test_host_restic_managed_state_cleanup.sh
 
       - name: Smoke test restic backup runner template
         run: bash tests/smoke/test_restic_backup_runner_template.sh

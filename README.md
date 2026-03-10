@@ -15,19 +15,21 @@ Design rules:
 
 Current public roles:
 
+- `crownops.deploy_services.host_traefik`
+- `crownops.deploy_services.host_restic`
 - `crownops.deploy_services.obsidian_livesync`
-- `crownops.deploy_services.restic_host_backups`
 - `crownops.deploy_services.restic_sftp_target_bootstrap`
 
 Current capabilities:
 
-- Obsidian LiveSync deployment for either `public_https` (Traefik + ACME) or `private_mesh`
+- Obsidian LiveSync deployment that owns only CouchDB, bootstrap, and handoff behavior
+- shared Traefik ingress with explicit `managed` and `adopt_managed` modes
 - Traefik routes rendered through the file provider instead of a Docker socket mount
 - automated CouchDB account, database, and security bootstrap
-- composable restic targets, jobs, and feature contributions
+- host-owned restic policy with composable targets, datasets, and jobs
 - optional SSH-key-based SFTP backup transport
 - optional Linux SFTP destination bootstrap for controlled backup targets
-- job-scoped pre/post backup hooks for service quiesce
+- dataset-scoped pre/post backup hooks for service quiesce
 
 Read first:
 

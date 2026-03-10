@@ -1,6 +1,6 @@
 [chttpd]
-bind_address = 0.0.0.0
-port = 5984
+bind_address = {{ obsidian_livesync.couchdb.bind_host }}
+port = {{ obsidian_livesync.couchdb.port }}
 require_valid_user = true
 enable_cors = true
 
@@ -10,9 +10,9 @@ require_valid_user = true
 [cors]
 credentials = true
 origins = {{ obsidian_effective_cors_origins | join(',') }}
-headers = {{ obsidian_cors_headers | join(',') }}
-methods = {{ obsidian_cors_methods | join(',') }}
-max_age = {{ obsidian_cors_max_age }}
+headers = {{ obsidian_livesync.couchdb.cors_headers | join(',') }}
+methods = {{ obsidian_livesync.couchdb.cors_methods | join(',') }}
+max_age = {{ obsidian_livesync.couchdb.cors_max_age }}
 
 [admins]
-{{ couchdb_admin_user }} = {{ couchdb_admin_local_ini_value }}
+{{ obsidian_livesync.couchdb.admin_user }} = {{ couchdb_admin_local_ini_value }}

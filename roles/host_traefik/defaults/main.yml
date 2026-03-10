@@ -1,0 +1,20 @@
+---
+host_traefik:
+  enabled: true
+  manage_mode: managed
+  layout_root: /opt/traefik
+  static_config_path: /opt/traefik/traefik.yml
+  dynamic_config_root: /opt/traefik/dynamic
+  dynamic_routes_dir: /opt/traefik/dynamic/routes
+  acme_storage_path: /opt/traefik/acme/acme.json
+  proxy_network_name: proxy
+  container_name: traefik
+  compose_project_name: traefik
+  certificate_resolver_name: dnsresolver
+  acme_email: ""
+  dns_provider: ""
+  dns_env: {}
+  https_entrypoint_name: websecure
+  https_port: 443
+  log_level: INFO
+  routes: []

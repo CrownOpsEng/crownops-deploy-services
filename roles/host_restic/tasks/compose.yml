@@ -1,0 +1,114 @@
+---
+- name: Initialize effective backup configuration
+  ansible.builtin.set_fact:
+    restic_effective_targets: []
+    restic_effective_target_names: []
+    restic_effective_datasets: []
+    restic_effective_dataset_names: []
+    restic_effective_jobs: []
+    restic_effective_pairs: []
+    restic_effective_defaults: "{{ host_restic_role_defaults | combine(host_restic.defaults | default({}), recursive=True) }}"
+    restic_desired_unit_paths: []
+    restic_desired_target_env_paths: []
+    restic_desired_password_paths: []
+    restic_desired_job_config_paths: []
+    restic_desired_ssh_paths: []
+
+- name: Normalize enabled backup targets
+  ansible.builtin.set_fact:
+    restic_effective_targets: "{{ restic_effective_targets + [restic_target_normalized] }}"
+    restic_desired_target_env_paths: "{{ restic_desired_target_env_paths + [host_restic.targets_dir ~ '/' ~ restic_target_normalized.name ~ '.env'] }}"
+    restic_desired_password_paths: "{{ restic_desired_password_paths + [host_restic.passwords_dir ~ '/' ~ restic_target_normalized.name ~ '.password'] }}"
+    restic_desired_ssh_paths: "{{ restic_desired_ssh_paths + restic_target_ssh_paths }}"
+  loop: "{{ host_restic.targets | default([]) }}"
+  loop_control:
+    label: "{{ item.name | default('unnamed-target') }}"
+  vars:
+    restic_target_normalized:
+      name: "{{ item.name | default('') | string }}"
+      repository: "{{ item.repository | default('') | string }}"
+      sftp_port: "{{ item.sftp_port | default(22) | int }}"
+      password: "{{ item.password | default('') | string }}"
+      ssh_private_key: "{{ item.ssh_private_key | default('') | string }}"
+      ssh_known_hosts: "{{ item.ssh_known_hosts | default('') | string }}"
+      sftp_command: "{{ item.sftp_command | default('') | string }}"
+      environment: "{{ item.environment | default({}) }}"
+      auto_init: "{{ item.auto_init | default(restic_effective_defaults.auto_init) | bool }}"
+    restic_target_ssh_paths: >-
+      {{
+        (
+          [host_restic.ssh_dir ~ '/' ~ restic_target_normalized.name ~ '.key']
+          if (restic_target_normalized.ssh_private_key | length) > 0
+          else []
+        )
+        + (
+          [host_restic.ssh_dir ~ '/' ~ restic_target_normalized.name ~ '_known_hosts']
+          if (restic_target_normalized.ssh_known_hosts | length) > 0
+          else []
+        )
+      }}
+  when: item.enabled | default(true) | bool
+
+- name: Capture effective target names
+  ansible.builtin.set_fact:
+    restic_effective_target_names: "{{ restic_effective_targets | map(attribute='name') | list }}"
+
+- name: Normalize enabled backup datasets
+  ansible.builtin.set_fact:
+    restic_effective_datasets: "{{ restic_effective_datasets + [restic_dataset_normalized] }}"
+  loop: "{{ host_restic.datasets | default([]) }}"
+  loop_control:
+    label: "{{ item.name | default('unnamed-dataset') }}"
+  vars:
+    restic_dataset_normalized:
+      name: "{{ item.name | default('') | string }}"
+      owner: "{{ item.owner | default('host') | string }}"
+      paths: "{{ item.paths | default([]) | list }}"
+      excludes: "{{ item.excludes | default([]) | list }}"
+      tags: "{{ item.tags | default([]) | list }}"
+      pre_commands: "{{ item.quiesce.pre_commands | default([]) | list }}"
+      post_commands: "{{ item.quiesce.post_commands | default([]) | list }}"
+  when: item.enabled | default(true) | bool
+
+- name: Capture effective dataset names
+  ansible.builtin.set_fact:
+    restic_effective_dataset_names: "{{ restic_effective_datasets | map(attribute='name') | list }}"
+
+- name: Normalize backup jobs from datasets
+  ansible.builtin.include_tasks: compose_job.yml
+  loop: "{{ host_restic.jobs | default([]) }}"
+  loop_control:
+    loop_var: restic_job_input
+    label: "{{ restic_job_input.name | default('unnamed-job') }}"
+  when: restic_job_input.enabled | default(true) | bool
+
+- name: Capture desired job config paths
+  ansible.builtin.set_fact:
+    restic_desired_job_config_paths: >-
+      {{
+        restic_effective_jobs
+        | map(attribute='name')
+        | map('regex_replace', '^(.*)$', host_restic.jobs_dir ~ '/\\1.sh')
+        | list
+      }}
+
+- name: Build effective job-target pairs
+  ansible.builtin.set_fact:
+    restic_effective_pairs: "{{ restic_effective_pairs + [restic_pair] }}"
+    restic_desired_unit_paths: "{{ restic_desired_unit_paths + restic_pair_unit_paths }}"
+  loop: "{{ restic_effective_jobs | subelements('target_names') }}"
+  loop_control:
+    label: "{{ item.0.name }} -> {{ item.1 }}"
+  vars:
+    restic_pair:
+      job_name: "{{ item.0.name }}"
+      target_name: "{{ item.1 }}"
+      backup_service_unit: "crownops-restic-backup-{{ item.0.name }}-{{ item.1 }}.service"
+      backup_timer_unit: "crownops-restic-backup-{{ item.0.name }}-{{ item.1 }}.timer"
+      maintenance_service_unit: "crownops-restic-maintain-{{ item.0.name }}-{{ item.1 }}.service"
+      maintenance_timer_unit: "crownops-restic-maintain-{{ item.0.name }}-{{ item.1 }}.timer"
+    restic_pair_unit_paths:
+      - "/etc/systemd/system/crownops-restic-backup-{{ item.0.name }}-{{ item.1 }}.service"
+      - "/etc/systemd/system/crownops-restic-backup-{{ item.0.name }}-{{ item.1 }}.timer"
+      - "/etc/systemd/system/crownops-restic-maintain-{{ item.0.name }}-{{ item.1 }}.service"
+      - "/etc/systemd/system/crownops-restic-maintain-{{ item.0.name }}-{{ item.1 }}.timer"

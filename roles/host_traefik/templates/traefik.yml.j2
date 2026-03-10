@@ -1,0 +1,19 @@
+entryPoints:
+  {{ host_traefik.https_entrypoint_name }}:
+    address: ":{{ host_traefik.https_port }}"
+providers:
+  file:
+    directory: "/dynamic/routes"
+    watch: true
+api:
+  dashboard: false
+certificatesResolvers:
+  {{ host_traefik.certificate_resolver_name }}:
+    acme:
+      email: {{ host_traefik.acme_email | quote }}
+      storage: {{ host_traefik.acme_storage_path | quote }}
+      dnsChallenge:
+        provider: {{ host_traefik.dns_provider | quote }}
+log:
+  level: {{ host_traefik.log_level | quote }}
+accessLog: {}

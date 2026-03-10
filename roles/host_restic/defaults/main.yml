@@ -1,0 +1,49 @@
+---
+host_restic:
+  enabled: true
+  install_package: true
+  package_name: restic
+  apt_cache_valid_time: 86400
+  backup_root: /opt/crownops-backup
+  targets_dir: /opt/crownops-backup/targets
+  jobs_dir: /opt/crownops-backup/jobs
+  passwords_dir: /opt/crownops-backup/passwords
+  backup_script_path: /usr/local/sbin/crownops-restic-backup
+  maintain_script_path: /usr/local/sbin/crownops-restic-maintain
+  ssh_dir: /opt/crownops-backup/ssh
+  targets: []
+  datasets: []
+  jobs: []
+  feature_owned_jobs: []
+  defaults:
+    auto_init: "{{ host_restic_role_defaults.auto_init }}"
+    backup_schedule: "{{ host_restic_role_defaults.backup_schedule }}"
+    backup_randomized_delay: "{{ host_restic_role_defaults.backup_randomized_delay }}"
+    maintenance_schedule: "{{ host_restic_role_defaults.maintenance_schedule }}"
+    maintenance_randomized_delay: "{{ host_restic_role_defaults.maintenance_randomized_delay }}"
+    retention_daily: "{{ host_restic_role_defaults.retention_daily }}"
+    retention_weekly: "{{ host_restic_role_defaults.retention_weekly }}"
+    retention_monthly: "{{ host_restic_role_defaults.retention_monthly }}"
+
+host_restic_role_defaults:
+  auto_init: true
+  backup_schedule: "*-*-* 03:30:00"
+  backup_randomized_delay: 15m
+  maintenance_schedule: "Sun *-*-* 05:30:00"
+  maintenance_randomized_delay: 30m
+  retention_daily: 14
+  retention_weekly: 8
+  retention_monthly: 6
+
+restic_effective_targets: []
+restic_effective_target_names: []
+restic_effective_datasets: []
+restic_effective_dataset_names: []
+restic_effective_jobs: []
+restic_effective_pairs: []
+restic_effective_defaults: {}
+restic_desired_unit_paths: []
+restic_desired_target_env_paths: []
+restic_desired_password_paths: []
+restic_desired_job_config_paths: []
+restic_desired_ssh_paths: []

@@ -1,43 +1,68 @@
 ---
+- name: Fail on removed legacy Obsidian variables
+  ansible.builtin.assert:
+    that:
+      - legacy_var not in vars
+    fail_msg: >-
+      obsidian_livesync no longer accepts the legacy variable {{ legacy_var }}.
+      Pass a single obsidian_livesync mapping instead.
+  loop:
+    - obsidian_access_mode
+    - obsidian_base_url
+    - obsidian_handoff_dir
+    - obsidian_cors_origins
+    - couchdb_dir
+    - couchdb_container_name
+    - couchdb_admin_user
+    - couchdb_admin_password
+    - couchdb_bind_host
+    - couchdb_port
+    - couchdb_vaults
+    - internal_network_name
+    - traefik_dir
+    - traefik_network_name
+    - traefik_acme_email
+    - traefik_certresolver_name
+    - traefik_acme_storage
+    - acme_dns_provider
+    - acme_env
+    - obsidian_service_subdomain
+  loop_control:
+    loop_var: legacy_var
+
+- name: Normalize Obsidian role defaults
+  ansible.builtin.set_fact:
+    obsidian_livesync: "{{ obsidian_livesync_role_defaults | combine(obsidian_livesync, recursive=True) }}"
+
 - name: Validate Obsidian access mode
   ansible.builtin.assert:
     that:
-      - obsidian_access_mode in ['public_https', 'private_mesh']
-    fail_msg: "obsidian_access_mode must be public_https or private_mesh."
+      - obsidian_livesync.access_mode in ['public_https', 'private_mesh']
+    fail_msg: "obsidian_livesync.access_mode must be public_https or private_mesh."
 
 - name: Validate required Obsidian stack variables
   ansible.builtin.assert:
     that:
-      - couchdb_dir is defined
-      - couchdb_vaults is defined
-      - couchdb_admin_user is defined
-      - couchdb_admin_password is defined
-      - (obsidian_access_mode != 'public_https') or (traefik_dir is defined)
-      - (obsidian_access_mode != 'public_https') or (ops_domain is defined)
-      - (obsidian_access_mode != 'public_https') or (obsidian_service_subdomain is defined)
-      - (obsidian_access_mode != 'private_mesh') or ((obsidian_base_url | string | trim) != '')
-    fail_msg: "obsidian_livesync requires CouchDB, vault, and access-mode variables to be defined by the consuming site repo."
-
-- name: Derive public HTTPS base URL
-  ansible.builtin.set_fact:
-    obsidian_base_url: "https://{{ obsidian_service_subdomain }}.{{ ops_domain }}"
-  when:
-    - obsidian_access_mode == 'public_https'
-    - (obsidian_base_url | string | trim) == ''
+      - (obsidian_livesync.base_url | string | trim) != ''
+      - (obsidian_livesync.couchdb.dir | string | trim) != ''
+      - (obsidian_livesync.couchdb.container_name | string | trim) != ''
+      - (obsidian_livesync.couchdb.internal_network_name | string | trim) != ''
+      - (obsidian_livesync.couchdb.bind_host | string | trim) != ''
+      - (obsidian_livesync.couchdb.admin_user | string | trim) != ''
+      - (obsidian_livesync.couchdb.admin_password | string | trim) != ''
+      - (obsidian_livesync.couchdb.vaults | length) > 0
+      - (obsidian_livesync.access_mode != 'public_https') or ((obsidian_livesync.ingress.shared_network_name | string | trim) != '')
+    fail_msg: "obsidian_livesync requires a complete nested role contract with CouchDB settings and a resolved base_url."
 
 - name: Derive effective Obsidian CORS origins
   ansible.builtin.set_fact:
     obsidian_effective_cors_origins: >-
       {{
         (
-          ['app://obsidian.md', 'capacitor://localhost', 'http://localhost', obsidian_base_url]
-          + (obsidian_cors_origins | default([]) | list)
+          ['app://obsidian.md', 'capacitor://localhost', 'http://localhost', obsidian_livesync.base_url]
+          + (obsidian_livesync.couchdb.cors_origins | default([]) | list)
         ) | unique
       }}
-
-- name: Apply Traefik portion of the Obsidian stack
-  ansible.builtin.import_tasks: traefik.yml
-  when: obsidian_access_mode == 'public_https'
 
 - name: Apply CouchDB portion of the Obsidian stack
   ansible.builtin.import_tasks: couchdb.yml

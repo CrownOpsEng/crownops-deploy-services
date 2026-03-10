@@ -8,11 +8,14 @@ Intended dependency direction:
 
 Public roles should represent stable operator-facing capabilities such as:
 
+- `host_traefik`
+- `host_restic`
 - `obsidian_livesync`
-- `restic_host_backups`
 - `restic_sftp_target_bootstrap`
 
-`obsidian_livesync` intentionally separates the shared service stack from site-level ingress choices, so consuming repos can switch between `public_https` and `private_mesh` without forking the role.
+`obsidian_livesync` owns only CouchDB and Obsidian-specific bootstrap concerns.
+`host_traefik` owns shared ingress lifecycle and managed route fragments.
+`host_restic` owns host-wide backup policy, while site composition decides which datasets exist.
 
 Internal implementation details should stay inside those roles as task files and templates instead of becoming separate top-level site repo roles.
 
@@ -24,6 +27,7 @@ This collection is the place for:
 - ingress configuration that avoids handing public-facing containers direct Docker daemon access
 - application-aware bootstrap and backup hooks that belong to a reusable stack
 - backup contracts that let site repos compose host policy separately from feature data ownership
+- explicit managed-adoption validation for shared ingress instead of split ownership modes
 
 This collection is not the place for:
 

@@ -4,4 +4,4 @@
   become: true
   gather_facts: false
   roles:
-    - role: restic_host_backups
+    - role: host_restic

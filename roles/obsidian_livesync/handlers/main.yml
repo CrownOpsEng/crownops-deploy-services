@@ -1,5 +1,5 @@
 ---
 - name: Restart CouchDB stack
   community.docker.docker_compose_v2:
-    project_src: "{{ couchdb_dir }}"
+    project_src: "{{ obsidian_livesync.couchdb.dir }}"
     state: restarted

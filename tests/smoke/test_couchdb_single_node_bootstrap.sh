@@ -6,23 +6,24 @@ TASK_FILE="${ROOT_DIR}/roles/obsidian_livesync/tasks/couchdb.yml"
 COMPOSE_TEMPLATE="${ROOT_DIR}/roles/obsidian_livesync/templates/couchdb-docker-compose.yml.j2"
 LOCAL_INI_TEMPLATE="${ROOT_DIR}/roles/obsidian_livesync/templates/local.ini.j2"
 HANDLER_FILE="${ROOT_DIR}/roles/obsidian_livesync/handlers/main.yml"
+MAIN_TASK_FILE="${ROOT_DIR}/roles/obsidian_livesync/tasks/main.yml"
 
-if ! rg -n -F 'path: "{{ couchdb_dir }}/data"' "${TASK_FILE}" >/dev/null || ! rg -n 'owner: "5984"' "${TASK_FILE}" >/dev/null; then
+if ! rg -n -F 'path: "{{ obsidian_livesync.couchdb.dir }}/data"' "${TASK_FILE}" >/dev/null || ! rg -n 'owner: "5984"' "${TASK_FILE}" >/dev/null; then
   echo "expected CouchDB data directory to be owned by the CouchDB container uid" >&2
   exit 1
 fi
 
-if ! rg -n -F 'path: "{{ couchdb_dir }}/data"' "${TASK_FILE}" >/dev/null || ! rg -n 'group: "5984"' "${TASK_FILE}" >/dev/null; then
+if ! rg -n -F 'path: "{{ obsidian_livesync.couchdb.dir }}/data"' "${TASK_FILE}" >/dev/null || ! rg -n 'group: "5984"' "${TASK_FILE}" >/dev/null; then
   echo "expected CouchDB data directory to be owned by the CouchDB container gid" >&2
   exit 1
 fi
 
-if ! rg -n -F 'dest: "{{ couchdb_dir }}/etc/local.ini"' "${TASK_FILE}" >/dev/null || ! rg -n 'owner: "5984"' "${TASK_FILE}" >/dev/null; then
+if ! rg -n -F 'dest: "{{ obsidian_livesync.couchdb.dir }}/etc/local.ini"' "${TASK_FILE}" >/dev/null || ! rg -n 'owner: "5984"' "${TASK_FILE}" >/dev/null; then
   echo "expected local.ini to be rendered with the CouchDB container uid" >&2
   exit 1
 fi
 
-if ! rg -n -F 'dest: "{{ couchdb_dir }}/etc/local.ini"' "${TASK_FILE}" >/dev/null || ! rg -n 'group: "5984"' "${TASK_FILE}" >/dev/null; then
+if ! rg -n -F 'dest: "{{ obsidian_livesync.couchdb.dir }}/etc/local.ini"' "${TASK_FILE}" >/dev/null || ! rg -n 'group: "5984"' "${TASK_FILE}" >/dev/null; then
   echo "expected local.ini to be rendered with the CouchDB container gid" >&2
   exit 1
 fi
@@ -79,6 +80,11 @@ if ! rg -n '^- name: Restart CouchDB stack$' "${HANDLER_FILE}" >/dev/null; then
   exit 1
 fi
 
+if ! rg -n 'obsidian_livesync\.couchdb\.dir' "${HANDLER_FILE}" >/dev/null; then
+  echo "expected obsidian_livesync role to restart CouchDB from the nested role contract" >&2
+  exit 1
+fi
+
 if ! rg -n 'state: restarted' "${HANDLER_FILE}" >/dev/null; then
   echo "expected CouchDB restart handler to use docker compose restart semantics" >&2
   exit 1
@@ -101,6 +107,16 @@ fi
 
 if rg -n 'bootstrap-couchdb\\.sh' "${TASK_FILE}" >/dev/null; then
   echo "unexpected legacy bootstrap helper reference remains in CouchDB tasks" >&2
+  exit 1
+fi
+
+if [[ -e "${ROOT_DIR}/roles/obsidian_livesync/tasks/traefik.yml" ]]; then
+  echo "obsidian_livesync must not own Traefik tasks after the ownership split" >&2
+  exit 1
+fi
+
+if ! rg -n 'obsidian_livesync no longer accepts the legacy variable' "${MAIN_TASK_FILE}" >/dev/null; then
+  echo "expected obsidian_livesync to fail fast on removed legacy variables" >&2
   exit 1
 fi
 
