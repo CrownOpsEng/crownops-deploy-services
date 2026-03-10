@@ -21,6 +21,7 @@ Current public roles:
 Current capabilities:
 
 - Traefik + CouchDB LiveSync deployment for Obsidian
+- Traefik routes rendered through the file provider instead of a Docker socket mount
 - automated CouchDB account, database, and security bootstrap
 - composable restic targets, jobs, and feature contributions
 - optional SSH-key-based SFTP backup transport

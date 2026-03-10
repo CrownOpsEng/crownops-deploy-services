@@ -10,7 +10,6 @@ services:
       {{ k }}: {{ v | quote }}
 {% endfor %}
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
       - {{ traefik_dir }}/traefik.yml:/traefik.yml:ro
       - {{ traefik_dir }}/dynamic:/dynamic:ro
       - {{ traefik_dir }}/acme:/opt/traefik/acme

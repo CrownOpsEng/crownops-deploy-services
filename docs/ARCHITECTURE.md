@@ -10,6 +10,7 @@ Public roles should represent stable operator-facing capabilities such as:
 
 - `obsidian_livesync`
 - `restic_host_backups`
+- `restic_sftp_target_bootstrap`
 
 Internal implementation details should stay inside those roles as task files and templates instead of becoming separate top-level site repo roles.
 
@@ -18,6 +19,7 @@ This collection is the place for:
 - reusable service stacks
 - reusable host-level backup capabilities
 - shared compose-based service deployment logic
+- ingress configuration that avoids handing public-facing containers direct Docker daemon access
 - application-aware bootstrap and backup hooks that belong to a reusable stack
 - backup contracts that let site repos compose host policy separately from feature data ownership
 
