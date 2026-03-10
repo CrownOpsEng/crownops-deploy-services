@@ -66,4 +66,5 @@ Design notes:
 - passwords are rendered to dedicated files instead of inline env vars
 - timers are generated per job/target pair so schedules can vary by data class
 - features should contribute backup paths and hooks through inventory or host-class vars instead of hard-coding one host-global backup list
+- prefer precise durable paths over broad parent directories; for example back up `.../data`, `acme.json`, or a workspace root rather than the whole service directory when configuration is reproducible
 - use `ansible-playbook ... playbooks/backup.yml` to converge backup configuration, then test execution by starting the relevant `crownops-restic-backup-*.service` units directly instead of rerunning the full converge loop

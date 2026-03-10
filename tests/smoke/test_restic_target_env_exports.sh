@@ -50,6 +50,11 @@ if ! grep -F 'backup@example.com' "${TMP_DIR}/h4f.env" >/dev/null; then
   exit 1
 fi
 
+if ! grep -F 'backup@example.com -s sftp' "${TMP_DIR}/h4f.env" >/dev/null; then
+  echo "rendered restic target env should place the destination before the requested sftp subsystem" >&2
+  exit 1
+fi
+
 if ! grep -F ' -p 2222 ' "${TMP_DIR}/h4f.env" >/dev/null; then
   echo "rendered restic target env should include the configured non-default SFTP port" >&2
   exit 1
