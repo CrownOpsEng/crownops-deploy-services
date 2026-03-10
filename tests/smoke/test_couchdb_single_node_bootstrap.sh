@@ -7,12 +7,22 @@ COMPOSE_TEMPLATE="${ROOT_DIR}/roles/obsidian_livesync/templates/couchdb-docker-c
 LOCAL_INI_TEMPLATE="${ROOT_DIR}/roles/obsidian_livesync/templates/local.ini.j2"
 HANDLER_FILE="${ROOT_DIR}/roles/obsidian_livesync/handlers/main.yml"
 
-if ! rg -n 'owner: "5984"' "${TASK_FILE}" >/dev/null; then
+if ! rg -n -F 'path: "{{ couchdb_dir }}/data"' "${TASK_FILE}" >/dev/null || ! rg -n 'owner: "5984"' "${TASK_FILE}" >/dev/null; then
+  echo "expected CouchDB data directory to be owned by the CouchDB container uid" >&2
+  exit 1
+fi
+
+if ! rg -n -F 'path: "{{ couchdb_dir }}/data"' "${TASK_FILE}" >/dev/null || ! rg -n 'group: "5984"' "${TASK_FILE}" >/dev/null; then
+  echo "expected CouchDB data directory to be owned by the CouchDB container gid" >&2
+  exit 1
+fi
+
+if ! rg -n -F 'dest: "{{ couchdb_dir }}/etc/local.ini"' "${TASK_FILE}" >/dev/null || ! rg -n 'owner: "5984"' "${TASK_FILE}" >/dev/null; then
   echo "expected local.ini to be rendered with the CouchDB container uid" >&2
   exit 1
 fi
 
-if ! rg -n 'group: "5984"' "${TASK_FILE}" >/dev/null; then
+if ! rg -n -F 'dest: "{{ couchdb_dir }}/etc/local.ini"' "${TASK_FILE}" >/dev/null || ! rg -n 'group: "5984"' "${TASK_FILE}" >/dev/null; then
   echo "expected local.ini to be rendered with the CouchDB container gid" >&2
   exit 1
 fi
@@ -71,6 +81,21 @@ fi
 
 if ! rg -n 'state: restarted' "${HANDLER_FILE}" >/dev/null; then
   echo "expected CouchDB restart handler to use docker compose restart semantics" >&2
+  exit 1
+fi
+
+if ! rg -n -F -- '- name: Check existing CouchDB local.ini' "${TASK_FILE}" >/dev/null; then
+  echo "expected role to inspect any existing local.ini before templating" >&2
+  exit 1
+fi
+
+if ! rg -n -F -- '- name: Read existing CouchDB local.ini' "${TASK_FILE}" >/dev/null; then
+  echo "expected role to read existing local.ini content when present" >&2
+  exit 1
+fi
+
+if ! rg -n -F -- '- name: Derive CouchDB admin value for local.ini' "${TASK_FILE}" >/dev/null; then
+  echo "expected role to preserve the existing CouchDB admin hash in local.ini" >&2
   exit 1
 fi
 

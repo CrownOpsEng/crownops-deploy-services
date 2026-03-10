@@ -1,15 +1,52 @@
 ---
 - name: Create CouchDB directories
   ansible.builtin.file:
-    path: "{{ item }}"
+    path: "{{ item.path }}"
     state: directory
-    owner: root
-    group: root
-    mode: '0755'
+    owner: "{{ item.owner }}"
+    group: "{{ item.group }}"
+    mode: "{{ item.mode }}"
   loop:
-    - "{{ couchdb_dir }}"
-    - "{{ couchdb_dir }}/data"
-    - "{{ couchdb_dir }}/etc"
+    - path: "{{ couchdb_dir }}"
+      owner: root
+      group: root
+      mode: '0755'
+    - path: "{{ couchdb_dir }}/data"
+      owner: "5984"
+      group: "5984"
+      mode: '0755'
+    - path: "{{ couchdb_dir }}/etc"
+      owner: root
+      group: root
+      mode: '0755'
+
+- name: Check existing CouchDB local.ini
+  ansible.builtin.stat:
+    path: "{{ couchdb_dir }}/etc/local.ini"
+  register: obsidian_couchdb_local_ini_stat
+  no_log: true
+
+- name: Read existing CouchDB local.ini
+  ansible.builtin.slurp:
+    path: "{{ couchdb_dir }}/etc/local.ini"
+  register: obsidian_couchdb_existing_local_ini
+  when: obsidian_couchdb_local_ini_stat.stat.exists
+  no_log: true
+
+- name: Derive CouchDB admin value for local.ini
+  ansible.builtin.set_fact:
+    couchdb_admin_local_ini_value: >-
+      {{
+        (
+          (
+            (obsidian_couchdb_existing_local_ini.content | b64decode)
+            | regex_findall('(?m)^' ~ (couchdb_admin_user | regex_escape) ~ ' = (-pbkdf2:[^\\n]+)$')
+          ) | first | default(couchdb_admin_password, true)
+        )
+        if obsidian_couchdb_local_ini_stat.stat.exists
+        else couchdb_admin_password
+      }}
+  no_log: true
 
 - name: Render CouchDB local.ini
   ansible.builtin.template:

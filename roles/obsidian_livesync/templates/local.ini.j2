@@ -15,4 +15,4 @@ methods = {{ obsidian_cors_methods | join(',') }}
 max_age = {{ obsidian_cors_max_age }}
 
 [admins]
-{{ couchdb_admin_user }} = {{ couchdb_admin_password }}
+{{ couchdb_admin_user }} = {{ couchdb_admin_local_ini_value }}
