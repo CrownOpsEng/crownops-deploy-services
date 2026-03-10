@@ -46,7 +46,7 @@ run_commands() {
 
 cleanup() {
   local status="$1"
-  if [[ "${#POST_BACKUP_COMMANDS[@]}" -gt 0 ]]; then
+  if [[ -n "${POST_BACKUP_COMMANDS[*]:-}" ]]; then
     run_commands "post-backup" "${POST_BACKUP_COMMANDS[@]}" || err "One or more post-backup commands failed."
   fi
   exit "$status"
@@ -54,7 +54,7 @@ cleanup() {
 
 trap 'cleanup $?' EXIT
 
-if [[ "${#BACKUP_PATHS[@]}" -eq 0 ]]; then
+if [[ -z "${BACKUP_PATHS[*]:-}" ]]; then
   err "Backup job ${JOB_NAME} has no configured paths."
   exit 65
 fi

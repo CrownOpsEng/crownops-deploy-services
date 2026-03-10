@@ -35,3 +35,6 @@ jobs:
 
       - name: Smoke test CouchDB single-node bootstrap
         run: bash tests/smoke/test_couchdb_single_node_bootstrap.sh
+
+      - name: Smoke test restic backup runner template
+        run: bash tests/smoke/test_restic_backup_runner_template.sh
