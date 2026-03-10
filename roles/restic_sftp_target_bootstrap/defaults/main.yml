@@ -1,0 +1,10 @@
+---
+restic_sftp_target_account: ""
+restic_sftp_target_manage_user: false
+restic_sftp_target_authorized_keys: []
+restic_sftp_target_repository_path: ""
+restic_sftp_target_repository_owner: "{{ restic_sftp_target_account }}"
+restic_sftp_target_repository_group: "{{ restic_sftp_target_account }}"
+restic_sftp_target_directory_mode: "0700"
+restic_sftp_target_account_shell: /bin/bash
+restic_sftp_target_account_create_home: true

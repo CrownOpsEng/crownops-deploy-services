@@ -1,0 +1,10 @@
+---
+galaxy_info:
+  author: CrownOps
+  description: Prepare a Linux SFTP target for restic backups.
+  license: MIT
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Ubuntu
+      versions: [jammy, noble]
+dependencies: []

@@ -27,15 +27,13 @@
   ansible.builtin.assert:
     that:
       - >-
-        {{
-          (
-            restic_backup_contributions
-            | map(attribute='job')
-            | list
-            | difference(restic_effective_jobs | map(attribute='name') | list)
-            | length
-          ) == 0
-        }}
+        (
+          restic_backup_contributions
+          | map(attribute='job')
+          | list
+          | difference(restic_effective_jobs | map(attribute='name') | list)
+          | length
+        ) == 0
     fail_msg: "Each restic_backup_contributions entry must reference an existing backup job."
 
 - name: Validate individual backup targets
@@ -47,6 +45,7 @@
       - (item.password | length) > 0
       - item.environment is mapping
       - (item.ssh_private_key | length) == 0 or (item.sftp_command | length) > 0 or (item.ssh_known_hosts | length) > 0
+      - (item.ssh_private_key | length) == 0 or (item.sftp_command | length) > 0 or (item.repository is match('^sftp:[^:]+:.+$'))
     fail_msg: "Invalid restic target '{{ item.name | default('unnamed') }}'."
   loop: "{{ restic_effective_targets }}"
   loop_control:

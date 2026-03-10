@@ -19,6 +19,11 @@ Each enabled target defines:
 - optional `environment`
 - optional `auto_init`
 
+Role-level operational defaults:
+
+- `restic_apt_cache_valid_time` defaults to `86400` so repeat converges reuse a fresh apt cache instead of forcing `apt update` every time
+- the standalone backup playbooks are intended to run with fact gathering disabled because this role does not consume host facts
+
 Each enabled job defines:
 
 - `name`
@@ -61,3 +66,5 @@ Design notes:
 - passwords are rendered to dedicated files instead of inline env vars
 - timers are generated per job/target pair so schedules can vary by data class
 - features should contribute backup paths and hooks through inventory or host-class vars instead of hard-coding one host-global backup list
+- prefer precise durable paths over broad parent directories; for example back up `.../data`, `acme.json`, or a workspace root rather than the whole service directory when configuration is reproducible
+- use `ansible-playbook ... playbooks/backup.yml` to converge backup configuration, then test execution by starting the relevant `crownops-restic-backup-*.service` units directly instead of rerunning the full converge loop

@@ -17,6 +17,7 @@
     restic_target_normalized:
       name: "{{ item.name | default('') | string }}"
       repository: "{{ item.repository | default('') | string }}"
+      sftp_port: "{{ item.sftp_port | default(22) | int }}"
       password: "{{ item.password | default('') | string }}"
       ssh_private_key: "{{ item.ssh_private_key | default('') | string }}"
       ssh_known_hosts: "{{ item.ssh_known_hosts | default('') | string }}"

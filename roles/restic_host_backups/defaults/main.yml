@@ -2,6 +2,7 @@
 restic_enabled: true
 restic_install_package: true
 restic_package_name: restic
+restic_apt_cache_valid_time: 86400
 
 restic_backup_root: /opt/crownops-backup
 restic_targets_dir: "{{ restic_backup_root }}/targets"

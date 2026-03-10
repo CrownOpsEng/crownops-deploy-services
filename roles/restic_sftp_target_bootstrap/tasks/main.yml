@@ -1,0 +1,57 @@
+---
+- name: Validate required bootstrap variables
+  ansible.builtin.assert:
+    that:
+      - (restic_sftp_target_account | string | trim) != ""
+      - (restic_sftp_target_repository_path | string | trim) != ""
+      - (restic_sftp_target_authorized_keys | default([]) | length) > 0
+    fail_msg: "restic_sftp_target_bootstrap requires account, repository path, and at least one authorized public key."
+
+- name: Ensure backup target account exists when managed
+  ansible.builtin.user:
+    name: "{{ restic_sftp_target_account }}"
+    shell: "{{ restic_sftp_target_account_shell }}"
+    create_home: "{{ restic_sftp_target_account_create_home }}"
+    state: present
+  when: restic_sftp_target_manage_user | bool
+
+- name: Load passwd entry for backup target account
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ restic_sftp_target_account }}"
+
+- name: Validate backup target account exists
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.getent_passwd[restic_sftp_target_account] is defined
+    fail_msg: "The backup target account {{ restic_sftp_target_account }} does not exist on the destination."
+
+- name: Capture backup target home directory
+  ansible.builtin.set_fact:
+    restic_sftp_target_home: "{{ ansible_facts.getent_passwd[restic_sftp_target_account][4] }}"
+
+- name: Ensure backup target SSH directory exists
+  ansible.builtin.file:
+    path: "{{ restic_sftp_target_home }}/.ssh"
+    state: directory
+    owner: "{{ restic_sftp_target_account }}"
+    group: "{{ restic_sftp_target_account }}"
+    mode: "0700"
+
+- name: Install backup target authorized keys
+  ansible.posix.authorized_key:
+    user: "{{ restic_sftp_target_account }}"
+    key: "{{ item }}"
+    state: present
+    exclusive: false
+  loop: "{{ restic_sftp_target_authorized_keys }}"
+  loop_control:
+    label: "{{ restic_sftp_target_account }}"
+
+- name: Ensure backup repository path exists
+  ansible.builtin.file:
+    path: "{{ restic_sftp_target_repository_path }}"
+    state: directory
+    owner: "{{ restic_sftp_target_repository_owner }}"
+    group: "{{ restic_sftp_target_repository_group }}"
+    mode: "{{ restic_sftp_target_directory_mode }}"

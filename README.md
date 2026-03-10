@@ -17,14 +17,16 @@ Current public roles:
 
 - `crownops.deploy_services.obsidian_livesync`
 - `crownops.deploy_services.restic_host_backups`
+- `crownops.deploy_services.restic_sftp_target_bootstrap`
 
 Current capabilities:
 
-- Traefik + CouchDB LiveSync deployment for Obsidian
+- Obsidian LiveSync deployment for either `public_https` (Traefik + ACME) or `private_mesh`
 - Traefik routes rendered through the file provider instead of a Docker socket mount
 - automated CouchDB account, database, and security bootstrap
 - composable restic targets, jobs, and feature contributions
 - optional SSH-key-based SFTP backup transport
+- optional Linux SFTP destination bootstrap for controlled backup targets
 - job-scoped pre/post backup hooks for service quiesce
 
 Read first:

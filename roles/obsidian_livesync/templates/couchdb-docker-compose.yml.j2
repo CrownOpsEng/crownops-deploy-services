@@ -5,14 +5,18 @@ services:
     restart: unless-stopped
     networks:
       - {{ internal_network_name }}
+{% if obsidian_access_mode == "public_https" %}
       - {{ traefik_network_name }}
+{% endif %}
     ports:
       - "{{ couchdb_bind_host }}:{{ couchdb_port }}:5984"
     volumes:
       - {{ couchdb_dir }}/data:/opt/couchdb/data
-      - {{ couchdb_dir }}/etc/local.ini:/opt/couchdb/etc/local.d/local.ini:ro
+      - {{ couchdb_dir }}/etc/local.ini:/opt/couchdb/etc/local.d/local.ini
 networks:
   {{ internal_network_name }}:
     name: {{ internal_network_name }}
+{% if obsidian_access_mode == "public_https" %}
   {{ traefik_network_name }}:
     external: true
+{% endif %}

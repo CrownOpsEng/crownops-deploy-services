@@ -13,6 +13,7 @@
         name: "{{ restic_package_name }}"
         state: present
         update_cache: true
+        cache_valid_time: "{{ restic_apt_cache_valid_time }}"
       when: restic_install_package | bool
 
     - name: Ensure backup working directories exist

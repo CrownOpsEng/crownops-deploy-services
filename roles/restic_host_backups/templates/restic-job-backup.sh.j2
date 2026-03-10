@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+cleanup() {
+{% for contribution in restic_backup_contributions_effective | default([]) %}
+{% if contribution.job == item.name %}
+{% for cmd in contribution.post_commands | default([]) %}
+  {{ cmd }}
+{% endfor %}
+{% endif %}
+{% endfor %}
+}
+
+trap cleanup EXIT
+
+{% for contribution in restic_backup_contributions_effective | default([]) %}
+{% if contribution.job == item.name %}
+{% for cmd in contribution.pre_commands | default([]) %}
+{{ cmd }}
+{% endfor %}
+{% endif %}
+{% endfor %}
+
+run_target() {
+  local env_file="$1"
+  # shellcheck disable=SC1090
+  source "$env_file"
+
+  RESTIC_ARGS=()
+  if [[ -n "${RESTIC_SFTP_COMMAND:-}" ]]; then
+    RESTIC_ARGS+=(-o "sftp.command=${RESTIC_SFTP_COMMAND}")
+  fi
+
+  restic "${RESTIC_ARGS[@]}" snapshots >/dev/null 2>&1 || restic "${RESTIC_ARGS[@]}" init
+  restic "${RESTIC_ARGS[@]}" backup \
+{% for path in item.paths | default([]) %}
+    {{ path | quote }} \
+{% endfor %}
+{% for contribution in restic_backup_contributions_effective | default([]) %}
+{% if contribution.job == item.name %}
+{% for path in contribution.paths | default([]) %}
+    {{ path | quote }} \
+{% endfor %}
+{% endif %}
+{% endfor %}
+    --verbose
+}
+
+{% for target_name in item.target_names %}
+run_target {{ (restic_backup_root ~ '/targets/' ~ (target_name | regex_replace('[^A-Za-z0-9._-]+', '_')) ~ '.env') | quote }}
+{% endfor %}
