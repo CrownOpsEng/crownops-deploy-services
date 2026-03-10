@@ -32,10 +32,10 @@
           ) | unique
         }}
       target_names: "{{ (restic_job_input.target_names | default(restic_effective_target_names)) | unique }}"
-      backup_schedule: "{{ restic_job_input.backup_schedule | default(host_restic.defaults.backup_schedule) | string }}"
-      backup_randomized_delay: "{{ restic_job_input.backup_randomized_delay | default(host_restic.defaults.backup_randomized_delay) | string }}"
-      maintenance_schedule: "{{ restic_job_input.maintenance_schedule | default(host_restic.defaults.maintenance_schedule) | string }}"
-      maintenance_randomized_delay: "{{ restic_job_input.maintenance_randomized_delay | default(host_restic.defaults.maintenance_randomized_delay) | string }}"
-      retention_daily: "{{ restic_job_input.retention_daily | default(host_restic.defaults.retention_daily) | int }}"
-      retention_weekly: "{{ restic_job_input.retention_weekly | default(host_restic.defaults.retention_weekly) | int }}"
-      retention_monthly: "{{ restic_job_input.retention_monthly | default(host_restic.defaults.retention_monthly) | int }}"
+      backup_schedule: "{{ restic_job_input.backup_schedule | default(restic_effective_defaults.backup_schedule) | string }}"
+      backup_randomized_delay: "{{ restic_job_input.backup_randomized_delay | default(restic_effective_defaults.backup_randomized_delay) | string }}"
+      maintenance_schedule: "{{ restic_job_input.maintenance_schedule | default(restic_effective_defaults.maintenance_schedule) | string }}"
+      maintenance_randomized_delay: "{{ restic_job_input.maintenance_randomized_delay | default(restic_effective_defaults.maintenance_randomized_delay) | string }}"
+      retention_daily: "{{ restic_job_input.retention_daily | default(restic_effective_defaults.retention_daily) | int }}"
+      retention_weekly: "{{ restic_job_input.retention_weekly | default(restic_effective_defaults.retention_weekly) | int }}"
+      retention_monthly: "{{ restic_job_input.retention_monthly | default(restic_effective_defaults.retention_monthly) | int }}"

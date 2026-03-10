@@ -15,8 +15,8 @@ Each enabled target defines:
 - `repository`
 - `password`
 - optional `ssh_private_key`
-- optional `ssh_known_hosts`
-- optional `sftp_command`
+- `ssh_known_hosts` when `ssh_private_key` uses the generated SFTP transport
+- optional `sftp_command` when the target needs a custom transport command instead of the generated one
 - optional `environment`
 - optional `auto_init`
 
@@ -32,6 +32,7 @@ Each enabled dataset defines:
 
 Role-level operational defaults:
 
+- `host_restic.defaults` is optional; the role merges caller overrides onto internal schedule and retention defaults before composing jobs
 - `host_restic.apt_cache_valid_time` defaults to `86400` so repeat converges reuse a fresh apt cache instead of forcing `apt update` every time
 - the standalone backup playbooks are intended to run with fact gathering disabled because this role does not consume host facts
 

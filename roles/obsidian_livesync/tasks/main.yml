@@ -2,7 +2,7 @@
 - name: Fail on removed legacy Obsidian variables
   ansible.builtin.assert:
     that:
-      - lookup('ansible.builtin.vars', legacy_var, default=None) is none
+      - legacy_var not in vars
     fail_msg: >-
       obsidian_livesync no longer accepts the legacy variable {{ legacy_var }}.
       Pass a single obsidian_livesync mapping instead.

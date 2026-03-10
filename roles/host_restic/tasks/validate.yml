@@ -51,9 +51,28 @@
       - (item.repository | length) > 0
       - (item.password | length) > 0
       - item.environment is mapping
-      - (item.ssh_private_key | length) == 0 or (item.sftp_command | length) > 0 or (item.ssh_known_hosts | length) > 0
-      - (item.ssh_private_key | length) == 0 or (item.sftp_command | length) > 0 or (item.repository is match('^sftp:[^:]+:.+$'))
     fail_msg: "Invalid host_restic target '{{ item.name | default('unnamed') }}'."
+  loop: "{{ restic_effective_targets }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Validate SSH-backed targets can use generated SFTP transport
+  ansible.builtin.assert:
+    that:
+      - (item.ssh_private_key | length) == 0 or (item.sftp_command | length) > 0 or (item.repository is match('^sftp:[^:]+:.+$'))
+    fail_msg: >-
+      host_restic target '{{ item.name }}' uses ssh_private_key but does not resolve to an sftp: repository or custom sftp_command.
+  loop: "{{ restic_effective_targets }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Validate SSH-backed targets pin host keys or override transport
+  ansible.builtin.assert:
+    that:
+      - (item.ssh_private_key | length) == 0 or (item.sftp_command | length) > 0 or (item.ssh_known_hosts | length) > 0
+    fail_msg: >-
+      host_restic target '{{ item.name }}' uses ssh_private_key without ssh_known_hosts.
+      Provide pinned host keys or a custom sftp_command that owns host verification.
   loop: "{{ restic_effective_targets }}"
   loop_control:
     label: "{{ item.name }}"
