@@ -1,0 +1,8 @@
+---
+argument_specs:
+  main:
+    short_description: Configure shared host restic backups.
+    options:
+      host_restic:
+        type: dict
+        required: false

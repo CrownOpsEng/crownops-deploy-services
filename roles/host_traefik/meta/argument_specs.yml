@@ -1,0 +1,8 @@
+---
+argument_specs:
+  main:
+    short_description: Manage shared host Traefik ingress.
+    options:
+      host_traefik:
+        type: dict
+        required: false

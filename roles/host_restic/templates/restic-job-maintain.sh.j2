@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+run_target() {
+  local env_file="$1"
+  # shellcheck disable=SC1090
+  source "$env_file"
+
+  RESTIC_ARGS=()
+  if [[ -n "${RESTIC_SFTP_COMMAND:-}" ]]; then
+    RESTIC_ARGS+=(-o "sftp.command=${RESTIC_SFTP_COMMAND}")
+  fi
+
+  restic "${RESTIC_ARGS[@]}" forget --prune \
+    --keep-daily {{ item.retention_daily | default(restic_retention_daily) }} \
+    --keep-weekly {{ item.retention_weekly | default(restic_retention_weekly) }} \
+    --keep-monthly {{ item.retention_monthly | default(restic_retention_monthly) }}
+}
+
+{% for target_name in item.target_names %}
+run_target {{ (restic_backup_root ~ '/targets/' ~ (target_name | regex_replace('[^A-Za-z0-9._-]+', '_')) ~ '.env') | quote }}
+{% endfor %}

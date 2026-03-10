@@ -14,7 +14,7 @@ cat > "${TMP_DIR}/render.yml" <<EOF
   tasks:
     - name: Render runner
       ansible.builtin.template:
-        src: ${ROOT_DIR}/roles/restic_host_backups/templates/restic-backup.sh.j2
+        src: ${ROOT_DIR}/roles/host_restic/templates/restic-backup.sh.j2
         dest: ${TMP_DIR}/restic-backup.sh
       vars:
         restic_targets_dir: /opt/crownops-backup/targets

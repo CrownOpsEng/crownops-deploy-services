@@ -15,8 +15,9 @@ Design rules:
 
 Current public roles:
 
+- `crownops.deploy_services.host_traefik`
+- `crownops.deploy_services.host_restic`
 - `crownops.deploy_services.obsidian_livesync`
-- `crownops.deploy_services.restic_host_backups`
 - `crownops.deploy_services.restic_sftp_target_bootstrap`
 
 Current capabilities:

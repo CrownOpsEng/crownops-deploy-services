@@ -1,0 +1,7 @@
+---
+- name: Host Traefik role is not implemented yet
+  ansible.builtin.assert:
+    that:
+      - false
+    fail_msg: "host_traefik is a public role skeleton in this commit and is implemented in a follow-up commit."
+  when: host_traefik.enabled | default(true) | bool
