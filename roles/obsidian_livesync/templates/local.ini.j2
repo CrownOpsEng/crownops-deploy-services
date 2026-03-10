@@ -2,6 +2,7 @@
 bind_address = 0.0.0.0
 port = 5984
 require_valid_user = true
+enable_cors = true
 
 [chttpd_auth]
 require_valid_user = true
@@ -9,7 +10,9 @@ require_valid_user = true
 [cors]
 credentials = true
 origins = {{ obsidian_effective_cors_origins | join(',') }}
-enable_cors = true
+headers = {{ obsidian_cors_headers | join(',') }}
+methods = {{ obsidian_cors_methods | join(',') }}
+max_age = {{ obsidian_cors_max_age }}
 
 [admins]
 {{ couchdb_admin_user }} = {{ couchdb_admin_password }}

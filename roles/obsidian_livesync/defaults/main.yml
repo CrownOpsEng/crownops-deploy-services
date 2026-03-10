@@ -3,3 +3,18 @@ obsidian_handoff_dir: /root/crownops-handoff
 obsidian_access_mode: public_https
 obsidian_base_url: ""
 obsidian_cors_origins: []
+obsidian_cors_headers:
+  - accept
+  - authorization
+  - content-type
+  - origin
+  - referer
+  - x-requested-with
+obsidian_cors_methods:
+  - GET
+  - PUT
+  - POST
+  - HEAD
+  - DELETE
+  - OPTIONS
+obsidian_cors_max_age: 3600

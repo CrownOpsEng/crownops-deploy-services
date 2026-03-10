@@ -19,6 +19,7 @@
     group: "5984"
     mode: '0644'
   no_log: true
+  notify: Restart CouchDB stack
 
 - name: Render CouchDB docker compose
   ansible.builtin.template:
@@ -32,6 +33,9 @@
   community.docker.docker_compose_v2:
     project_src: "{{ couchdb_dir }}"
     state: present
+
+- name: Flush CouchDB restart handlers
+  ansible.builtin.meta: flush_handlers
 
 - name: Wait for local CouchDB admin endpoint
   ansible.builtin.uri:
