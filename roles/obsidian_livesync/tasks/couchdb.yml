@@ -75,7 +75,7 @@
       - 200
       - 201
       - 202
-  when: (obsidian_couchdb_cluster_setup.json.state | default('')) != 'cluster_finished'
+  when: (obsidian_couchdb_cluster_setup.json.state | default('')) not in ['single_node_enabled', 'cluster_finished']
   no_log: true
 
 - name: Wait for CouchDB single-node setup to finish
@@ -88,7 +88,7 @@
   register: obsidian_couchdb_cluster_setup_wait
   retries: 15
   delay: 2
-  until: (obsidian_couchdb_cluster_setup_wait.json.state | default('')) == 'cluster_finished'
+  until: (obsidian_couchdb_cluster_setup_wait.json.state | default('')) in ['single_node_enabled', 'cluster_finished']
   no_log: true
 
 - name: Wait for CouchDB system databases
