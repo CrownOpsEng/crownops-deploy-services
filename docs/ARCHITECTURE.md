@@ -10,6 +10,7 @@ Public roles should represent stable operator-facing capabilities such as:
 
 - `obsidian_livesync`
 - `restic_host_backups`
+- `restic_sftp_target_bootstrap`
 
 `obsidian_livesync` intentionally separates the shared service stack from site-level ingress choices, so consuming repos can switch between `public_https` and `private_mesh` without forking the role.
 
