@@ -17,3 +17,4 @@ dist/
 .vault_pass*
 vault-pass*
 *.vault-password*
+.tmp*/

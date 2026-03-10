@@ -23,10 +23,10 @@ Current capabilities:
 
 - Obsidian LiveSync deployment for either `public_https` (Traefik + ACME) or `private_mesh`
 - automated CouchDB account, database, and security bootstrap
-- restic backup scripts and timers driven by generic `restic_targets` and `restic_backup_jobs`
+- composable restic targets, jobs, and feature contributions
 - optional SSH-key-based SFTP backup transport
 - optional Linux SFTP destination bootstrap for controlled backup targets
-- optional pre/post backup hooks for service quiesce
+- job-scoped pre/post backup hooks for service quiesce
 
 Read first:
 

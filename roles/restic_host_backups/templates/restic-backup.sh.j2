@@ -1,35 +1,90 @@
 #!/usr/bin/env bash
 set -euo pipefail
-TARGET="${1:-primary}"
-case "$TARGET" in
-  primary)
-    source /opt/crownops-backup/restic-primary.env
-    ;;
-  secondary)
-    source /opt/crownops-backup/restic-secondary.env
-    ;;
-  *)
-    echo "Usage: $0 [primary|secondary]" >&2
-    exit 1
-    ;;
-esac
+TARGET_NAME="${1:-}"
+JOB_NAME="${2:-}"
+
+log() { printf '[restic-backup] %s\n' "$*"; }
+err() { printf '[restic-backup][ERROR] %s\n' "$*" >&2; }
+
+if [[ -z "$TARGET_NAME" || -z "$JOB_NAME" ]]; then
+  err "Usage: $0 <target> <job>"
+  exit 64
+fi
+
+TARGET_ENV="{{ restic_targets_dir }}/${TARGET_NAME}.env"
+JOB_CONFIG="{{ restic_jobs_dir }}/${JOB_NAME}.sh"
+
+[[ -r "$TARGET_ENV" ]] || { err "Missing target env: $TARGET_ENV"; exit 66; }
+[[ -r "$JOB_CONFIG" ]] || { err "Missing job config: $JOB_CONFIG"; exit 66; }
+
+# shellcheck disable=SC1090
+source "$TARGET_ENV"
+# shellcheck disable=SC1090
+source "$JOB_CONFIG"
 
 RESTIC_ARGS=()
 if [[ -n "${RESTIC_SFTP_COMMAND:-}" ]]; then
   RESTIC_ARGS+=(-o "sftp.command=${RESTIC_SFTP_COMMAND}")
 fi
 
-cleanup() {
-{% for cmd in restic_post_backup_commands %}
-  {{ cmd }}
-{% endfor %}
+HOST_LABEL="${RESTIC_HOST_LABEL:-$(hostname -f 2>/dev/null || hostname -s)}"
+
+run_commands() {
+  local phase="$1"
+  shift
+  local cmd
+
+  if [[ "$#" -eq 0 ]]; then
+    return 0
+  fi
+
+  for cmd in "$@"; do
+    log "${phase}: ${cmd}"
+    bash -lc "$cmd"
+  done
 }
 
-trap cleanup EXIT
+cleanup() {
+  local status="$1"
+  if [[ "${#POST_BACKUP_COMMANDS[@]}" -gt 0 ]]; then
+    run_commands "post-backup" "${POST_BACKUP_COMMANDS[@]}" || err "One or more post-backup commands failed."
+  fi
+  exit "$status"
+}
 
-{% for cmd in restic_pre_backup_commands %}
-{{ cmd }}
-{% endfor %}
+trap 'cleanup $?' EXIT
 
-restic "${RESTIC_ARGS[@]}" snapshots >/dev/null 2>&1 || restic "${RESTIC_ARGS[@]}" init
-restic "${RESTIC_ARGS[@]}" backup {% for p in restic_backup_paths %} {{ p }}{% endfor %}
+if [[ "${#BACKUP_PATHS[@]}" -eq 0 ]]; then
+  err "Backup job ${JOB_NAME} has no configured paths."
+  exit 65
+fi
+
+run_commands "pre-backup" "${PRE_BACKUP_COMMANDS[@]}"
+
+if [[ "${RESTIC_AUTO_INIT:-true}" == "true" ]]; then
+  restic "${RESTIC_ARGS[@]}" snapshots >/dev/null 2>&1 || restic "${RESTIC_ARGS[@]}" init
+else
+  restic "${RESTIC_ARGS[@]}" snapshots >/dev/null
+fi
+
+RESTIC_BACKUP_CMD=(restic "${RESTIC_ARGS[@]}" backup --host "$HOST_LABEL")
+
+for path in "${BACKUP_PATHS[@]}"; do
+  RESTIC_BACKUP_CMD+=("$path")
+done
+
+for exclude in "${BACKUP_EXCLUDES[@]}"; do
+  RESTIC_BACKUP_CMD+=(--exclude "$exclude")
+done
+
+RESTIC_BACKUP_CMD+=(--tag "job:${JOB_NAME}" --tag "target:${TARGET_NAME}")
+
+for tag in "${BACKUP_TAGS[@]}"; do
+  RESTIC_BACKUP_CMD+=(--tag "$tag")
+done
+
+log "Running backup job ${JOB_NAME} to target ${TARGET_NAME}"
+"${RESTIC_BACKUP_CMD[@]}"
+
+log "Latest snapshots for job ${JOB_NAME} on target ${TARGET_NAME}:"
+restic "${RESTIC_ARGS[@]}" snapshots --host "$HOST_LABEL" --tag "job:${JOB_NAME}" --compact
