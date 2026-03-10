@@ -1,7 +1,203 @@
 ---
-- name: Host Traefik role is not implemented yet
+- name: Validate Traefik manage mode
   ansible.builtin.assert:
     that:
-      - false
-    fail_msg: "host_traefik is a public role skeleton in this commit and is implemented in a follow-up commit."
+      - host_traefik.manage_mode in ['managed', 'adopt_managed']
+    fail_msg: "host_traefik.manage_mode must be managed or adopt_managed."
+  when: host_traefik.enabled | default(true) | bool
+
+- name: Validate required Traefik settings
+  ansible.builtin.assert:
+    that:
+      - (host_traefik.layout_root | string | trim) != ''
+      - (host_traefik.static_config_path | string | trim) != ''
+      - (host_traefik.dynamic_config_root | string | trim) != ''
+      - (host_traefik.dynamic_routes_dir | string | trim) != ''
+      - (host_traefik.acme_storage_path | string | trim) != ''
+      - (host_traefik.proxy_network_name | string | trim) != ''
+      - (host_traefik.container_name | string | trim) != ''
+      - (host_traefik.certificate_resolver_name | string | trim) != ''
+      - (host_traefik.acme_email | string | trim) != ''
+      - (host_traefik.dns_provider | string | trim) != ''
+      - host_traefik.dns_env | length > 0
+    fail_msg: "host_traefik requires an explicit managed contract and ACME DNS settings."
+  when: host_traefik.enabled | default(true) | bool
+
+- name: Initialize effective Traefik route data
+  ansible.builtin.set_fact:
+    host_traefik_effective_routes: []
+    host_traefik_desired_route_paths: []
+  when: host_traefik.enabled | default(true) | bool
+
+- name: Normalize Traefik routes
+  ansible.builtin.set_fact:
+    host_traefik_effective_routes: "{{ host_traefik_effective_routes + [host_traefik_route_normalized] }}"
+    host_traefik_desired_route_paths: "{{ host_traefik_desired_route_paths + [host_traefik.dynamic_routes_dir ~ '/' ~ host_traefik_route_normalized.name ~ '.yml'] }}"
+  loop: "{{ host_traefik.routes | default([]) }}"
+  loop_control:
+    label: "{{ item.name | default('unnamed-route') }}"
+  vars:
+    host_traefik_route_normalized:
+      name: "{{ item.name | default('') | string }}"
+      rule: "{{ item.rule | default('') | string }}"
+      service_url: "{{ item.service_url | default('') | string }}"
+      entrypoints: "{{ item.entrypoints | default([host_traefik.https_entrypoint_name]) | list }}"
+      tls: "{{ item.tls | default(true) | bool }}"
+      tls_certresolver_name: "{{ item.tls_certresolver_name | default(host_traefik.certificate_resolver_name) | string }}"
+      priority: "{{ item.priority | default(None) }}"
+  when: host_traefik.enabled | default(true) | bool
+
+- name: Validate normalized Traefik routes
+  ansible.builtin.assert:
+    that:
+      - (item.name | length) > 0
+      - item.name is match('^[a-z0-9][a-z0-9_-]*$')
+      - (item.rule | length) > 0
+      - (item.service_url | length) > 0
+      - item.entrypoints | length > 0
+    fail_msg: "Invalid host_traefik route '{{ item.name | default('unnamed') }}'."
+  loop: "{{ host_traefik_effective_routes | default([]) }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: host_traefik.enabled | default(true) | bool
+
+- name: Assert Traefik route names are unique
+  ansible.builtin.assert:
+    that:
+      - (host_traefik_effective_routes | map(attribute='name') | list | unique | length) == (host_traefik_effective_routes | length)
+    fail_msg: "host_traefik route names must be unique."
+  when: host_traefik.enabled | default(true) | bool
+
+- name: Ensure Traefik directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  loop:
+    - "{{ host_traefik.layout_root }}"
+    - "{{ host_traefik.dynamic_config_root }}"
+    - "{{ host_traefik.dynamic_routes_dir }}"
+    - "{{ host_traefik.acme_storage_path | dirname }}"
+  when:
+    - host_traefik.enabled | default(true) | bool
+    - host_traefik.manage_mode == 'managed'
+
+- name: Create Traefik ACME storage file
+  ansible.builtin.file:
+    path: "{{ host_traefik.acme_storage_path }}"
+    state: touch
+    owner: root
+    group: root
+    mode: '0600'
+  when:
+    - host_traefik.enabled | default(true) | bool
+    - host_traefik.manage_mode == 'managed'
+
+- name: Validate adopted Traefik directories exist
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  loop:
+    - "{{ host_traefik.layout_root }}"
+    - "{{ host_traefik.static_config_path }}"
+    - "{{ host_traefik.dynamic_config_root }}"
+    - "{{ host_traefik.dynamic_routes_dir }}"
+    - "{{ host_traefik.acme_storage_path }}"
+    - "{{ host_traefik.layout_root }}/docker-compose.yml"
+  register: host_traefik_adopt_stats
+  when:
+    - host_traefik.enabled | default(true) | bool
+    - host_traefik.manage_mode == 'adopt_managed'
+
+- name: Assert adopted Traefik layout matches managed paths
+  ansible.builtin.assert:
+    that:
+      - item.stat.exists
+    fail_msg: >-
+      host_traefik.manage_mode=adopt_managed requires the managed layout to already exist at {{ item.stat.path | default('unknown') }}.
+  loop: "{{ host_traefik_adopt_stats.results | default([]) }}"
+  loop_control:
+    label: "{{ item.stat.path | default(item.invocation.module_args.path) }}"
+  when:
+    - host_traefik.enabled | default(true) | bool
+    - host_traefik.manage_mode == 'adopt_managed'
+
+- name: Read adopted Traefik compose file
+  ansible.builtin.slurp:
+    path: "{{ host_traefik.layout_root }}/docker-compose.yml"
+  register: host_traefik_existing_compose
+  when:
+    - host_traefik.enabled | default(true) | bool
+    - host_traefik.manage_mode == 'adopt_managed'
+
+- name: Assert adopted Traefik compose file matches managed contract
+  ansible.builtin.assert:
+    that:
+      - (host_traefik_existing_compose.content | b64decode) is search('container_name:\\s+' ~ (host_traefik.container_name | regex_escape))
+      - (host_traefik_existing_compose.content | b64decode) is search('name:\\s+' ~ (host_traefik.proxy_network_name | regex_escape))
+      - (host_traefik_existing_compose.content | b64decode) is search((host_traefik.static_config_path | regex_escape))
+      - (host_traefik_existing_compose.content | b64decode) is search((host_traefik.dynamic_config_root | regex_escape))
+      - (host_traefik_existing_compose.content | b64decode) is search((host_traefik.acme_storage_path | regex_escape))
+    fail_msg: "adopt_managed only supports Traefik installs that already use the managed CrownOps layout and container contract."
+  when:
+    - host_traefik.enabled | default(true) | bool
+    - host_traefik.manage_mode == 'adopt_managed'
+
+- name: Find existing managed Traefik route fragments
+  ansible.builtin.find:
+    paths: "{{ host_traefik.dynamic_routes_dir }}"
+    patterns: "*.yml"
+    file_type: file
+  register: host_traefik_existing_routes
+  when: host_traefik.enabled | default(true) | bool
+
+- name: Remove stale managed Traefik route fragments
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ host_traefik_existing_routes.files | default([]) }}"
+  loop_control:
+    label: "{{ item.path | basename }}"
+  when:
+    - host_traefik.enabled | default(true) | bool
+    - item.path not in host_traefik_desired_route_paths
+
+- name: Render Traefik static config
+  ansible.builtin.template:
+    src: traefik.yml.j2
+    dest: "{{ host_traefik.static_config_path }}"
+    owner: root
+    group: root
+    mode: '0644'
+  when: host_traefik.enabled | default(true) | bool
+
+- name: Render managed Traefik route fragments
+  ansible.builtin.template:
+    src: route.yml.j2
+    dest: "{{ host_traefik.dynamic_routes_dir }}/{{ item.name }}.yml"
+    owner: root
+    group: root
+    mode: '0644'
+  loop: "{{ host_traefik_effective_routes | default([]) }}"
+  loop_control:
+    label: "{{ item.name }}"
+  vars:
+    host_traefik_route: "{{ item }}"
+  when: host_traefik.enabled | default(true) | bool
+
+- name: Render Traefik docker compose
+  ansible.builtin.template:
+    src: traefik-docker-compose.yml.j2
+    dest: "{{ host_traefik.layout_root }}/docker-compose.yml"
+    owner: root
+    group: root
+    mode: '0644'
+  when: host_traefik.enabled | default(true) | bool
+
+- name: Deploy Traefik stack
+  community.docker.docker_compose_v2:
+    project_src: "{{ host_traefik.layout_root }}"
+    state: present
+    project_name: "{{ host_traefik.compose_project_name }}"
   when: host_traefik.enabled | default(true) | bool

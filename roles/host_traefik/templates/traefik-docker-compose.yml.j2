@@ -1,0 +1,20 @@
+services:
+  traefik:
+    image: traefik:v3.3
+    container_name: {{ host_traefik.container_name }}
+    restart: unless-stopped
+    ports:
+      - "{{ host_traefik.https_port }}:{{ host_traefik.https_port }}"
+    environment:
+{% for key, value in host_traefik.dns_env | dictsort %}
+      {{ key }}: {{ value | quote }}
+{% endfor %}
+    volumes:
+      - {{ host_traefik.static_config_path }}:/traefik.yml:ro
+      - {{ host_traefik.dynamic_config_root }}:/dynamic:ro
+      - {{ host_traefik.acme_storage_path | dirname }}:{{ host_traefik.acme_storage_path | dirname }}
+    networks:
+      - {{ host_traefik.proxy_network_name }}
+networks:
+  {{ host_traefik.proxy_network_name }}:
+    name: {{ host_traefik.proxy_network_name }}

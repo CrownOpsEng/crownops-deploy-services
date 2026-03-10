@@ -5,4 +5,61 @@ argument_specs:
     options:
       host_traefik:
         type: dict
-        required: false
+        required: true
+        options:
+          enabled:
+            type: bool
+          manage_mode:
+            type: str
+            choices:
+              - managed
+              - adopt_managed
+          layout_root:
+            type: str
+          static_config_path:
+            type: str
+          dynamic_config_root:
+            type: str
+          dynamic_routes_dir:
+            type: str
+          acme_storage_path:
+            type: str
+          proxy_network_name:
+            type: str
+          container_name:
+            type: str
+          compose_project_name:
+            type: str
+          certificate_resolver_name:
+            type: str
+          acme_email:
+            type: str
+          dns_provider:
+            type: str
+          dns_env:
+            type: dict
+          https_entrypoint_name:
+            type: str
+          https_port:
+            type: int
+          log_level:
+            type: str
+          routes:
+            type: list
+            elements: dict
+            options:
+              name:
+                type: str
+              rule:
+                type: str
+              service_url:
+                type: str
+              entrypoints:
+                type: list
+                elements: str
+              tls:
+                type: bool
+              tls_certresolver_name:
+                type: str
+              priority:
+                type: int

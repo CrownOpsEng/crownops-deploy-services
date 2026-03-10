@@ -1,0 +1,7 @@
+---
+- name: Configure shared host Traefik from the services collection
+  hosts: service_hosts
+  become: true
+  gather_facts: false
+  roles:
+    - role: host_traefik
