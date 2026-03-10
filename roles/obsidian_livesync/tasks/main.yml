@@ -30,6 +30,10 @@
   loop_control:
     loop_var: legacy_var
 
+- name: Normalize Obsidian role defaults
+  ansible.builtin.set_fact:
+    obsidian_livesync: "{{ obsidian_livesync_role_defaults | combine(obsidian_livesync, recursive=True) }}"
+
 - name: Validate Obsidian access mode
   ansible.builtin.assert:
     that:

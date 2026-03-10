@@ -1,10 +1,13 @@
----
-obsidian_livesync:
+obsidian_livesync_role_defaults:
   access_mode: public_https
   base_url: ""
   handoff_dir: /root/crownops-handoff
   ingress:
+    route_name: ""
     shared_network_name: ""
+  private_mesh:
+    url_strategy: ""
+    tailnet_name: ""
   couchdb:
     dir: /opt/couchdb
     container_name: couchdb
@@ -30,3 +33,27 @@ obsidian_livesync:
       - DELETE
       - OPTIONS
     cors_max_age: 3600
+
+obsidian_livesync:
+  access_mode: "{{ obsidian_livesync_role_defaults.access_mode }}"
+  base_url: "{{ obsidian_livesync_role_defaults.base_url }}"
+  handoff_dir: "{{ obsidian_livesync_role_defaults.handoff_dir }}"
+  ingress:
+    route_name: "{{ obsidian_livesync_role_defaults.ingress.route_name }}"
+    shared_network_name: "{{ obsidian_livesync_role_defaults.ingress.shared_network_name }}"
+  private_mesh:
+    url_strategy: "{{ obsidian_livesync_role_defaults.private_mesh.url_strategy }}"
+    tailnet_name: "{{ obsidian_livesync_role_defaults.private_mesh.tailnet_name }}"
+  couchdb:
+    dir: "{{ obsidian_livesync_role_defaults.couchdb.dir }}"
+    container_name: "{{ obsidian_livesync_role_defaults.couchdb.container_name }}"
+    internal_network_name: "{{ obsidian_livesync_role_defaults.couchdb.internal_network_name }}"
+    bind_host: "{{ obsidian_livesync_role_defaults.couchdb.bind_host }}"
+    port: "{{ obsidian_livesync_role_defaults.couchdb.port }}"
+    admin_user: "{{ obsidian_livesync_role_defaults.couchdb.admin_user }}"
+    admin_password: "{{ obsidian_livesync_role_defaults.couchdb.admin_password }}"
+    vaults: "{{ obsidian_livesync_role_defaults.couchdb.vaults }}"
+    cors_origins: "{{ obsidian_livesync_role_defaults.couchdb.cors_origins }}"
+    cors_headers: "{{ obsidian_livesync_role_defaults.couchdb.cors_headers }}"
+    cors_methods: "{{ obsidian_livesync_role_defaults.couchdb.cors_methods }}"
+    cors_max_age: "{{ obsidian_livesync_role_defaults.couchdb.cors_max_age }}"
