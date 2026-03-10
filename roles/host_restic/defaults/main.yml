@@ -1,32 +1,34 @@
 ---
-restic_enabled: true
-restic_install_package: true
-restic_package_name: restic
-restic_apt_cache_valid_time: 86400
-
-restic_backup_root: /opt/crownops-backup
-restic_targets_dir: "{{ restic_backup_root }}/targets"
-restic_jobs_dir: "{{ restic_backup_root }}/jobs"
-restic_passwords_dir: "{{ restic_backup_root }}/passwords"
-restic_backup_script_path: /usr/local/sbin/crownops-restic-backup
-restic_maintain_script_path: /usr/local/sbin/crownops-restic-maintain
-restic_ssh_dir: "{{ restic_backup_root }}/ssh"
-
-restic_targets: []
-restic_backup_jobs: []
-restic_backup_contributions: []
-
-restic_default_auto_init: true
-restic_default_backup_schedule: "*-*-* 03:30:00"
-restic_default_backup_randomized_delay: 15m
-restic_default_maintenance_schedule: "Sun *-*-* 05:30:00"
-restic_default_maintenance_randomized_delay: 30m
-restic_default_retention_daily: 14
-restic_default_retention_weekly: 8
-restic_default_retention_monthly: 6
+host_restic:
+  enabled: true
+  install_package: true
+  package_name: restic
+  apt_cache_valid_time: 86400
+  backup_root: /opt/crownops-backup
+  targets_dir: /opt/crownops-backup/targets
+  jobs_dir: /opt/crownops-backup/jobs
+  passwords_dir: /opt/crownops-backup/passwords
+  backup_script_path: /usr/local/sbin/crownops-restic-backup
+  maintain_script_path: /usr/local/sbin/crownops-restic-maintain
+  ssh_dir: /opt/crownops-backup/ssh
+  targets: []
+  datasets: []
+  jobs: []
+  feature_owned_jobs: []
+  defaults:
+    auto_init: true
+    backup_schedule: "*-*-* 03:30:00"
+    backup_randomized_delay: 15m
+    maintenance_schedule: "Sun *-*-* 05:30:00"
+    maintenance_randomized_delay: 30m
+    retention_daily: 14
+    retention_weekly: 8
+    retention_monthly: 6
 
 restic_effective_targets: []
 restic_effective_target_names: []
+restic_effective_datasets: []
+restic_effective_dataset_names: []
 restic_effective_jobs: []
 restic_effective_pairs: []
 restic_desired_unit_paths: []

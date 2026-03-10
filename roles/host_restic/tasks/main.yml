@@ -1,6 +1,31 @@
 ---
+- name: Fail on removed legacy restic variables
+  ansible.builtin.assert:
+    that:
+      - lookup('ansible.builtin.vars', legacy_var, default=None) is none
+    fail_msg: >-
+      host_restic no longer accepts the legacy variable {{ legacy_var }}.
+      Pass a single host_restic mapping with targets, datasets, and jobs instead.
+  loop:
+    - restic_enabled
+    - restic_install_package
+    - restic_package_name
+    - restic_apt_cache_valid_time
+    - restic_backup_root
+    - restic_targets_dir
+    - restic_jobs_dir
+    - restic_passwords_dir
+    - restic_backup_script_path
+    - restic_maintain_script_path
+    - restic_ssh_dir
+    - restic_targets
+    - restic_backup_jobs
+    - restic_backup_contributions
+  loop_control:
+    loop_var: legacy_var
+
 - name: Configure restic host backups
-  when: restic_enabled | bool
+  when: host_restic.enabled | bool
   block:
     - name: Compose effective backup configuration
       ansible.builtin.import_tasks: compose.yml
@@ -10,11 +35,11 @@
 
     - name: Install restic package
       ansible.builtin.apt:
-        name: "{{ restic_package_name }}"
+        name: "{{ host_restic.package_name }}"
         state: present
         update_cache: true
-        cache_valid_time: "{{ restic_apt_cache_valid_time }}"
-      when: restic_install_package | bool
+        cache_valid_time: "{{ host_restic.apt_cache_valid_time }}"
+      when: host_restic.install_package | bool
 
     - name: Ensure backup working directories exist
       ansible.builtin.file:
@@ -24,14 +49,14 @@
         group: root
         mode: '0700'
       loop:
-        - "{{ restic_backup_root }}"
-        - "{{ restic_targets_dir }}"
-        - "{{ restic_jobs_dir }}"
-        - "{{ restic_passwords_dir }}"
+        - "{{ host_restic.backup_root }}"
+        - "{{ host_restic.targets_dir }}"
+        - "{{ host_restic.jobs_dir }}"
+        - "{{ host_restic.passwords_dir }}"
 
     - name: Ensure restic SSH directory exists when key material is configured
       ansible.builtin.file:
-        path: "{{ restic_ssh_dir }}"
+        path: "{{ host_restic.ssh_dir }}"
         state: directory
         owner: root
         group: root
@@ -40,7 +65,7 @@
 
     - name: Render restic target SSH private keys
       ansible.builtin.copy:
-        dest: "{{ restic_ssh_dir }}/{{ item.name }}.key"
+        dest: "{{ host_restic.ssh_dir }}/{{ item.name }}.key"
         content: "{{ item.ssh_private_key }}"
         owner: root
         group: root
@@ -53,7 +78,7 @@
 
     - name: Render restic target known_hosts files
       ansible.builtin.copy:
-        dest: "{{ restic_ssh_dir }}/{{ item.name }}_known_hosts"
+        dest: "{{ host_restic.ssh_dir }}/{{ item.name }}_known_hosts"
         content: "{{ item.ssh_known_hosts }}"
         owner: root
         group: root
@@ -66,7 +91,7 @@
 
     - name: Render restic password files
       ansible.builtin.copy:
-        dest: "{{ restic_passwords_dir }}/{{ item.name }}.password"
+        dest: "{{ host_restic.passwords_dir }}/{{ item.name }}.password"
         content: "{{ item.password }}\n"
         owner: root
         group: root
@@ -79,7 +104,7 @@
     - name: Render restic target env files
       ansible.builtin.template:
         src: restic-target.env.j2
-        dest: "{{ restic_targets_dir }}/{{ item.name }}.env"
+        dest: "{{ host_restic.targets_dir }}/{{ item.name }}.env"
         owner: root
         group: root
         mode: '0600'
@@ -89,12 +114,13 @@
         label: "{{ item.name }}"
       vars:
         restic_target: "{{ item }}"
-        restic_target_password_file_path: "{{ restic_passwords_dir }}/{{ item.name }}.password"
+        restic_target_password_file_path: "{{ host_restic.passwords_dir }}/{{ item.name }}.password"
+        restic_ssh_dir: "{{ host_restic.ssh_dir }}"
 
     - name: Render restic job config files
       ansible.builtin.template:
         src: restic-job.sh.j2
-        dest: "{{ restic_jobs_dir }}/{{ item.name }}.sh"
+        dest: "{{ host_restic.jobs_dir }}/{{ item.name }}.sh"
         owner: root
         group: root
         mode: '0600'
@@ -107,18 +133,24 @@
     - name: Render generic restic backup runner
       ansible.builtin.template:
         src: restic-backup.sh.j2
-        dest: "{{ restic_backup_script_path }}"
+        dest: "{{ host_restic.backup_script_path }}"
         owner: root
         group: root
         mode: '0750'
+      vars:
+        restic_targets_dir: "{{ host_restic.targets_dir }}"
+        restic_jobs_dir: "{{ host_restic.jobs_dir }}"
 
     - name: Render generic restic maintenance runner
       ansible.builtin.template:
         src: restic-maintain.sh.j2
-        dest: "{{ restic_maintain_script_path }}"
+        dest: "{{ host_restic.maintain_script_path }}"
         owner: root
         group: root
         mode: '0750'
+      vars:
+        restic_targets_dir: "{{ host_restic.targets_dir }}"
+        restic_jobs_dir: "{{ host_restic.jobs_dir }}"
 
     - name: Find existing managed systemd unit files
       ansible.builtin.find:
@@ -167,7 +199,7 @@
 
           [Service]
           Type=oneshot
-          ExecStart={{ restic_backup_script_path }} {{ item.target_name }} {{ item.job_name }}
+          ExecStart={{ host_restic.backup_script_path }} {{ item.target_name }} {{ item.job_name }}
           Nice=10
           IOSchedulingClass=best-effort
           IOSchedulingPriority=7
@@ -214,7 +246,7 @@
 
           [Service]
           Type=oneshot
-          ExecStart={{ restic_maintain_script_path }} {{ item.target_name }} {{ item.job_name }}
+          ExecStart={{ host_restic.maintain_script_path }} {{ item.target_name }} {{ item.job_name }}
           Nice=10
           IOSchedulingClass=best-effort
           IOSchedulingPriority=7

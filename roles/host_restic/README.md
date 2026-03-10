@@ -4,9 +4,10 @@ Reusable host backup capability for site repos that need composable restic jobs.
 
 The role contract is:
 
-- `restic_targets`: where data is stored
-- `restic_backup_jobs`: what logical backup jobs exist on the host
-- `restic_backup_contributions`: optional per-feature additions merged into named jobs
+- `host_restic.targets`: where data is stored
+- `host_restic.datasets`: durable backup datasets contributed by the host composition layer
+- `host_restic.jobs`: logical host-owned backup policy that selects datasets and targets
+- `host_restic.feature_owned_jobs`: reserved and intentionally unsupported in this refactor
 
 Each enabled target defines:
 
@@ -19,18 +20,26 @@ Each enabled target defines:
 - optional `environment`
 - optional `auto_init`
 
+Each enabled dataset defines:
+
+- `name`
+- `owner`
+- `paths`
+- optional `excludes`
+- optional `tags`
+- optional `quiesce.pre_commands`
+- optional `quiesce.post_commands`
+
 Role-level operational defaults:
 
-- `restic_apt_cache_valid_time` defaults to `86400` so repeat converges reuse a fresh apt cache instead of forcing `apt update` every time
+- `host_restic.apt_cache_valid_time` defaults to `86400` so repeat converges reuse a fresh apt cache instead of forcing `apt update` every time
 - the standalone backup playbooks are intended to run with fact gathering disabled because this role does not consume host facts
 
 Each enabled job defines:
 
 - `name`
-- `paths`
-- optional `excludes`
-- optional `pre_commands`
-- optional `post_commands`
+- optional `dataset_names`
+- optional `selector_tags`
 - optional `tags`
 - optional `target_names`
 - optional `backup_schedule`
@@ -40,15 +49,6 @@ Each enabled job defines:
 - optional `retention_daily`
 - optional `retention_weekly`
 - optional `retention_monthly`
-
-Each contribution defines:
-
-- `job`
-- optional `paths`
-- optional `excludes`
-- optional `pre_commands`
-- optional `post_commands`
-- optional `tags`
 
 Rendered artifacts:
 
@@ -65,6 +65,7 @@ Design notes:
 - target credentials are stored root-only on disk
 - passwords are rendered to dedicated files instead of inline env vars
 - timers are generated per job/target pair so schedules can vary by data class
-- features should contribute backup paths and hooks through inventory or host-class vars instead of hard-coding one host-global backup list
+- datasets are composed before this role runs; the role does not accept feature self-registration at runtime
+- features should contribute backup datasets through the site composition layer instead of mutating host-wide policy directly
 - prefer precise durable paths over broad parent directories; for example back up `.../data`, `acme.json`, or a workspace root rather than the whole service directory when configuration is reproducible
 - use `ansible-playbook ... playbooks/backup.yml` to converge backup configuration, then test execution by starting the relevant `crownops-restic-backup-*.service` units directly instead of rerunning the full converge loop
