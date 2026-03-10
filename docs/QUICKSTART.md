@@ -20,3 +20,4 @@ Role notes:
 - `restic_host_backups` models backup policy as targets, logical jobs, and feature contributions
 - `restic_host_backups` supports SSH-key-backed SFTP and target-specific environment variables
 - `restic_host_backups` supports job-scoped pre/post backup command hooks for service quiesce
+- `restic_host_backups` defaults `restic_apt_cache_valid_time` to `86400` and expects backup playbooks to skip unused fact gathering for faster repeat converges
