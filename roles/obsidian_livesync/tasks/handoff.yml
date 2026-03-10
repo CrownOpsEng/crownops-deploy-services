@@ -1,7 +1,7 @@
 ---
 - name: Create handoff directory
   ansible.builtin.file:
-    path: "{{ obsidian_handoff_dir }}"
+    path: "{{ obsidian_livesync.handoff_dir }}"
     state: directory
     owner: root
     group: root
@@ -9,17 +9,17 @@
 
 - name: Render synced vault handoff summary
   ansible.builtin.copy:
-    dest: "{{ obsidian_handoff_dir }}/USER_VAULT_HANDOFF.md"
+    dest: "{{ obsidian_livesync.handoff_dir }}/USER_VAULT_HANDOFF.md"
     owner: root
     group: root
     mode: '0600'
     content: |
       # User Vault Handoff
 
-      Access mode: {{ obsidian_access_mode }}
-      Base URL: {{ obsidian_base_url }}
+      Access mode: {{ obsidian_livesync.access_mode }}
+      Base URL: {{ obsidian_livesync.base_url }}
 
-      {% for v in couchdb_vaults %}
+      {% for v in obsidian_livesync.couchdb.vaults %}
       ## {{ v.name }}
       - DB name: {{ v.db_name }}
       - CouchDB username: {{ v.user }}

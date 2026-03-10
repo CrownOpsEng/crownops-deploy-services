@@ -1,20 +1,32 @@
 ---
-obsidian_handoff_dir: /root/crownops-handoff
-obsidian_access_mode: public_https
-obsidian_base_url: ""
-obsidian_cors_origins: []
-obsidian_cors_headers:
-  - accept
-  - authorization
-  - content-type
-  - origin
-  - referer
-  - x-requested-with
-obsidian_cors_methods:
-  - GET
-  - PUT
-  - POST
-  - HEAD
-  - DELETE
-  - OPTIONS
-obsidian_cors_max_age: 3600
+obsidian_livesync:
+  access_mode: public_https
+  base_url: ""
+  handoff_dir: /root/crownops-handoff
+  ingress:
+    shared_network_name: ""
+  couchdb:
+    dir: /opt/couchdb
+    container_name: couchdb
+    internal_network_name: internal
+    bind_host: 127.0.0.1
+    port: 5984
+    admin_user: admin
+    admin_password: ""
+    vaults: []
+    cors_origins: []
+    cors_headers:
+      - accept
+      - authorization
+      - content-type
+      - origin
+      - referer
+      - x-requested-with
+    cors_methods:
+      - GET
+      - PUT
+      - POST
+      - HEAD
+      - DELETE
+      - OPTIONS
+    cors_max_age: 3600

@@ -5,4 +5,62 @@ argument_specs:
     options:
       obsidian_livesync:
         type: dict
-        required: false
+        required: true
+        options:
+          access_mode:
+            type: str
+            choices:
+              - public_https
+              - private_mesh
+          base_url:
+            type: str
+          handoff_dir:
+            type: str
+          ingress:
+            type: dict
+            options:
+              shared_network_name:
+                type: str
+          couchdb:
+            type: dict
+            required: true
+            options:
+              dir:
+                type: str
+              container_name:
+                type: str
+              internal_network_name:
+                type: str
+              bind_host:
+                type: str
+              port:
+                type: int
+              admin_user:
+                type: str
+              admin_password:
+                type: str
+                no_log: true
+              vaults:
+                type: list
+                elements: dict
+                options:
+                  name:
+                    type: str
+                  db_name:
+                    type: str
+                  user:
+                    type: str
+                  password:
+                    type: str
+                    no_log: true
+              cors_origins:
+                type: list
+                elements: str
+              cors_headers:
+                type: list
+                elements: str
+              cors_methods:
+                type: list
+                elements: str
+              cors_max_age:
+                type: int

@@ -7,28 +7,28 @@
     group: "{{ item.group }}"
     mode: "{{ item.mode }}"
   loop:
-    - path: "{{ couchdb_dir }}"
+    - path: "{{ obsidian_livesync.couchdb.dir }}"
       owner: root
       group: root
       mode: '0755'
-    - path: "{{ couchdb_dir }}/data"
+    - path: "{{ obsidian_livesync.couchdb.dir }}/data"
       owner: "5984"
       group: "5984"
       mode: '0755'
-    - path: "{{ couchdb_dir }}/etc"
+    - path: "{{ obsidian_livesync.couchdb.dir }}/etc"
       owner: root
       group: root
       mode: '0755'
 
 - name: Check existing CouchDB local.ini
   ansible.builtin.stat:
-    path: "{{ couchdb_dir }}/etc/local.ini"
+    path: "{{ obsidian_livesync.couchdb.dir }}/etc/local.ini"
   register: obsidian_couchdb_local_ini_stat
   no_log: true
 
 - name: Read existing CouchDB local.ini
   ansible.builtin.slurp:
-    path: "{{ couchdb_dir }}/etc/local.ini"
+    path: "{{ obsidian_livesync.couchdb.dir }}/etc/local.ini"
   register: obsidian_couchdb_existing_local_ini
   when: obsidian_couchdb_local_ini_stat.stat.exists
   no_log: true
@@ -40,18 +40,18 @@
         (
           (
             (obsidian_couchdb_existing_local_ini.content | b64decode)
-            | regex_findall('(?m)^' ~ (couchdb_admin_user | regex_escape) ~ ' = (-pbkdf2:[^\\n]+)$')
-          ) | first | default(couchdb_admin_password, true)
+            | regex_findall('(?m)^' ~ (obsidian_livesync.couchdb.admin_user | regex_escape) ~ ' = (-pbkdf2:[^\\n]+)$')
+          ) | first | default(obsidian_livesync.couchdb.admin_password, true)
         )
         if obsidian_couchdb_local_ini_stat.stat.exists
-        else couchdb_admin_password
+        else obsidian_livesync.couchdb.admin_password
       }}
   no_log: true
 
 - name: Render CouchDB local.ini
   ansible.builtin.template:
     src: local.ini.j2
-    dest: "{{ couchdb_dir }}/etc/local.ini"
+    dest: "{{ obsidian_livesync.couchdb.dir }}/etc/local.ini"
     owner: "5984"
     group: "5984"
     mode: '0644'
@@ -61,14 +61,14 @@
 - name: Render CouchDB docker compose
   ansible.builtin.template:
     src: couchdb-docker-compose.yml.j2
-    dest: "{{ couchdb_dir }}/docker-compose.yml"
+    dest: "{{ obsidian_livesync.couchdb.dir }}/docker-compose.yml"
     owner: root
     group: root
     mode: '0644'
 
 - name: Deploy CouchDB stack
   community.docker.docker_compose_v2:
-    project_src: "{{ couchdb_dir }}"
+    project_src: "{{ obsidian_livesync.couchdb.dir }}"
     state: present
 
 - name: Flush CouchDB restart handlers
@@ -76,9 +76,9 @@
 
 - name: Wait for local CouchDB admin endpoint
   ansible.builtin.uri:
-    url: "http://{{ couchdb_bind_host }}:{{ couchdb_port }}/_up"
-    user: "{{ couchdb_admin_user }}"
-    password: "{{ couchdb_admin_password }}"
+    url: "http://{{ obsidian_couchdb_api_host }}:{{ obsidian_livesync.couchdb.port }}/_up"
+    user: "{{ obsidian_livesync.couchdb.admin_user }}"
+    password: "{{ obsidian_livesync.couchdb.admin_password }}"
     force_basic_auth: true
     status_code: 200
   register: obsidian_couchdb_up
@@ -86,44 +86,50 @@
   delay: 2
   until: obsidian_couchdb_up.status == 200
   no_log: true
+  vars:
+    obsidian_couchdb_api_host: "{{ '127.0.0.1' if obsidian_livesync.couchdb.bind_host == '0.0.0.0' else obsidian_livesync.couchdb.bind_host }}"
 
 - name: Read CouchDB cluster setup state
   ansible.builtin.uri:
-    url: "http://{{ couchdb_bind_host }}:{{ couchdb_port }}/_cluster_setup"
-    user: "{{ couchdb_admin_user }}"
-    password: "{{ couchdb_admin_password }}"
+    url: "http://{{ obsidian_couchdb_api_host }}:{{ obsidian_livesync.couchdb.port }}/_cluster_setup"
+    user: "{{ obsidian_livesync.couchdb.admin_user }}"
+    password: "{{ obsidian_livesync.couchdb.admin_password }}"
     force_basic_auth: true
     status_code: 200
   register: obsidian_couchdb_cluster_setup
   no_log: true
+  vars:
+    obsidian_couchdb_api_host: "{{ '127.0.0.1' if obsidian_livesync.couchdb.bind_host == '0.0.0.0' else obsidian_livesync.couchdb.bind_host }}"
 
 - name: Enable CouchDB single-node setup
   ansible.builtin.uri:
-    url: "http://{{ couchdb_bind_host }}:{{ couchdb_port }}/_cluster_setup"
+    url: "http://{{ obsidian_couchdb_api_host }}:{{ obsidian_livesync.couchdb.port }}/_cluster_setup"
     method: POST
-    user: "{{ couchdb_admin_user }}"
-    password: "{{ couchdb_admin_password }}"
+    user: "{{ obsidian_livesync.couchdb.admin_user }}"
+    password: "{{ obsidian_livesync.couchdb.admin_password }}"
     force_basic_auth: true
     body_format: json
     body:
       action: enable_single_node
-      bind_address: "{{ couchdb_bind_host }}"
-      port: "{{ couchdb_port | string }}"
+      bind_address: "{{ obsidian_livesync.couchdb.bind_host }}"
+      port: "{{ obsidian_livesync.couchdb.port | string }}"
       node_count: "1"
-      username: "{{ couchdb_admin_user }}"
-      password: "{{ couchdb_admin_password }}"
+      username: "{{ obsidian_livesync.couchdb.admin_user }}"
+      password: "{{ obsidian_livesync.couchdb.admin_password }}"
     status_code:
       - 200
       - 201
       - 202
   when: (obsidian_couchdb_cluster_setup.json.state | default('')) not in ['single_node_enabled', 'cluster_finished']
   no_log: true
+  vars:
+    obsidian_couchdb_api_host: "{{ '127.0.0.1' if obsidian_livesync.couchdb.bind_host == '0.0.0.0' else obsidian_livesync.couchdb.bind_host }}"
 
 - name: Wait for CouchDB single-node setup to finish
   ansible.builtin.uri:
-    url: "http://{{ couchdb_bind_host }}:{{ couchdb_port }}/_cluster_setup"
-    user: "{{ couchdb_admin_user }}"
-    password: "{{ couchdb_admin_password }}"
+    url: "http://{{ obsidian_couchdb_api_host }}:{{ obsidian_livesync.couchdb.port }}/_cluster_setup"
+    user: "{{ obsidian_livesync.couchdb.admin_user }}"
+    password: "{{ obsidian_livesync.couchdb.admin_password }}"
     force_basic_auth: true
     status_code: 200
   register: obsidian_couchdb_cluster_setup_wait
@@ -131,12 +137,14 @@
   delay: 2
   until: (obsidian_couchdb_cluster_setup_wait.json.state | default('')) in ['single_node_enabled', 'cluster_finished']
   no_log: true
+  vars:
+    obsidian_couchdb_api_host: "{{ '127.0.0.1' if obsidian_livesync.couchdb.bind_host == '0.0.0.0' else obsidian_livesync.couchdb.bind_host }}"
 
 - name: Wait for CouchDB system databases
   ansible.builtin.uri:
-    url: "http://{{ couchdb_bind_host }}:{{ couchdb_port }}/{{ item }}"
-    user: "{{ couchdb_admin_user }}"
-    password: "{{ couchdb_admin_password }}"
+    url: "http://{{ obsidian_couchdb_api_host }}:{{ obsidian_livesync.couchdb.port }}/{{ item }}"
+    user: "{{ obsidian_livesync.couchdb.admin_user }}"
+    password: "{{ obsidian_livesync.couchdb.admin_password }}"
     force_basic_auth: true
     status_code: 200
   loop:
@@ -147,26 +155,30 @@
   delay: 2
   until: obsidian_couchdb_system_dbs.status == 200
   no_log: true
+  vars:
+    obsidian_couchdb_api_host: "{{ '127.0.0.1' if obsidian_livesync.couchdb.bind_host == '0.0.0.0' else obsidian_livesync.couchdb.bind_host }}"
 
 - name: Read existing CouchDB user documents
   ansible.builtin.uri:
-    url: "http://{{ couchdb_bind_host }}:{{ couchdb_port }}/_users/org.couchdb.user:{{ item.user }}"
-    user: "{{ couchdb_admin_user }}"
-    password: "{{ couchdb_admin_password }}"
+    url: "http://{{ obsidian_couchdb_api_host }}:{{ obsidian_livesync.couchdb.port }}/_users/org.couchdb.user:{{ item.user }}"
+    user: "{{ obsidian_livesync.couchdb.admin_user }}"
+    password: "{{ obsidian_livesync.couchdb.admin_password }}"
     force_basic_auth: true
     status_code:
       - 200
       - 404
-  loop: "{{ couchdb_vaults }}"
+  loop: "{{ obsidian_livesync.couchdb.vaults }}"
   register: obsidian_couchdb_user_docs
   no_log: true
+  vars:
+    obsidian_couchdb_api_host: "{{ '127.0.0.1' if obsidian_livesync.couchdb.bind_host == '0.0.0.0' else obsidian_livesync.couchdb.bind_host }}"
 
 - name: Ensure CouchDB users exist with expected passwords
   ansible.builtin.uri:
-    url: "http://{{ couchdb_bind_host }}:{{ couchdb_port }}/_users/org.couchdb.user:{{ item.item.user }}"
+    url: "http://{{ obsidian_couchdb_api_host }}:{{ obsidian_livesync.couchdb.port }}/_users/org.couchdb.user:{{ item.item.user }}"
     method: PUT
-    user: "{{ couchdb_admin_user }}"
-    password: "{{ couchdb_admin_password }}"
+    user: "{{ obsidian_livesync.couchdb.admin_user }}"
+    password: "{{ obsidian_livesync.couchdb.admin_password }}"
     force_basic_auth: true
     body_format: json
     body:
@@ -181,26 +193,30 @@
       - 202
   loop: "{{ obsidian_couchdb_user_docs.results }}"
   no_log: true
+  vars:
+    obsidian_couchdb_api_host: "{{ '127.0.0.1' if obsidian_livesync.couchdb.bind_host == '0.0.0.0' else obsidian_livesync.couchdb.bind_host }}"
 
 - name: Ensure CouchDB databases exist
   ansible.builtin.uri:
-    url: "http://{{ couchdb_bind_host }}:{{ couchdb_port }}/{{ item.db_name }}"
+    url: "http://{{ obsidian_couchdb_api_host }}:{{ obsidian_livesync.couchdb.port }}/{{ item.db_name }}"
     method: PUT
-    user: "{{ couchdb_admin_user }}"
-    password: "{{ couchdb_admin_password }}"
+    user: "{{ obsidian_livesync.couchdb.admin_user }}"
+    password: "{{ obsidian_livesync.couchdb.admin_password }}"
     force_basic_auth: true
     status_code:
       - 201
       - 412
-  loop: "{{ couchdb_vaults }}"
+  loop: "{{ obsidian_livesync.couchdb.vaults }}"
   no_log: true
+  vars:
+    obsidian_couchdb_api_host: "{{ '127.0.0.1' if obsidian_livesync.couchdb.bind_host == '0.0.0.0' else obsidian_livesync.couchdb.bind_host }}"
 
 - name: Apply CouchDB security objects
   ansible.builtin.uri:
-    url: "http://{{ couchdb_bind_host }}:{{ couchdb_port }}/{{ item.db_name }}/_security"
+    url: "http://{{ obsidian_couchdb_api_host }}:{{ obsidian_livesync.couchdb.port }}/{{ item.db_name }}/_security"
     method: PUT
-    user: "{{ couchdb_admin_user }}"
-    password: "{{ couchdb_admin_password }}"
+    user: "{{ obsidian_livesync.couchdb.admin_user }}"
+    password: "{{ obsidian_livesync.couchdb.admin_password }}"
     force_basic_auth: true
     body_format: json
     body:
@@ -215,5 +231,7 @@
     status_code:
       - 200
       - 201
-  loop: "{{ couchdb_vaults }}"
+  loop: "{{ obsidian_livesync.couchdb.vaults }}"
   no_log: true
+  vars:
+    obsidian_couchdb_api_host: "{{ '127.0.0.1' if obsidian_livesync.couchdb.bind_host == '0.0.0.0' else obsidian_livesync.couchdb.bind_host }}"
