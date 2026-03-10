@@ -45,6 +45,9 @@ jobs:
       - name: Smoke test host Traefik adoption contract
         run: bash tests/smoke/test_host_traefik_adoption_contract.sh
 
+      - name: Smoke test host Traefik disabled skip path
+        run: bash tests/smoke/test_host_traefik_disabled_skip.sh
+
       - name: Smoke test CouchDB single-node bootstrap
         run: bash tests/smoke/test_couchdb_single_node_bootstrap.sh
 

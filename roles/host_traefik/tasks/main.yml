@@ -118,7 +118,7 @@
       host_traefik.manage_mode=adopt_managed requires the managed layout to already exist at {{ item.stat.path | default('unknown') }}.
   loop: "{{ host_traefik_adopt_stats.results | default([]) }}"
   loop_control:
-    label: "{{ item.stat.path | default(item.invocation.module_args.path) }}"
+    label: "{{ item.stat.path | default(item.item | default('unknown')) }}"
   when:
     - host_traefik.enabled | default(true) | bool
     - host_traefik.manage_mode == 'adopt_managed'
