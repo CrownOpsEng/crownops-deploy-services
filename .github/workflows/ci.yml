@@ -38,3 +38,6 @@ jobs:
 
       - name: Smoke test restic backup runner template
         run: bash tests/smoke/test_restic_backup_runner_template.sh
+
+      - name: Smoke test restic target env exports
+        run: bash tests/smoke/test_restic_target_env_exports.sh
