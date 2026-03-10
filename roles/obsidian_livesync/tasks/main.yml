@@ -30,7 +30,7 @@
     obsidian_effective_cors_origins: >-
       {{
         (
-          ['app://obsidian.md', 'capacitor://localhost', obsidian_base_url]
+          ['app://obsidian.md', 'capacitor://localhost', 'http://localhost', obsidian_base_url]
           + (obsidian_cors_origins | default([]) | list)
         ) | unique
       }}
