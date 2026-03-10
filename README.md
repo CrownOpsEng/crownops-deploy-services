@@ -17,6 +17,7 @@ Current public roles:
 
 - `crownops.deploy_services.obsidian_livesync`
 - `crownops.deploy_services.restic_host_backups`
+- `crownops.deploy_services.restic_sftp_target_bootstrap`
 
 Current capabilities:
 
@@ -24,6 +25,7 @@ Current capabilities:
 - automated CouchDB account, database, and security bootstrap
 - restic backup scripts and timers driven by generic `restic_targets` and `restic_backup_jobs`
 - optional SSH-key-based SFTP backup transport
+- optional Linux SFTP destination bootstrap for controlled backup targets
 - optional pre/post backup hooks for service quiesce
 
 Read first:
