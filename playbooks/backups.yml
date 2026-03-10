@@ -2,6 +2,6 @@
 - name: Configure restic host backups from the services collection
   hosts: service_hosts
   become: true
-  gather_facts: true
+  gather_facts: false
   roles:
     - role: restic_host_backups
