@@ -48,6 +48,9 @@ jobs:
       - name: Smoke test host restic dataset contract
         run: bash tests/smoke/test_host_restic_dataset_contract.sh
 
+      - name: Smoke test host restic managed state cleanup
+        run: bash tests/smoke/test_host_restic_managed_state_cleanup.sh
+
       - name: Smoke test restic backup runner template
         run: bash tests/smoke/test_restic_backup_runner_template.sh
 

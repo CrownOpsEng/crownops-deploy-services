@@ -130,6 +130,78 @@
       vars:
         restic_job: "{{ item }}"
 
+    - name: Find existing managed restic target env files
+      ansible.builtin.find:
+        paths: "{{ host_restic.targets_dir }}"
+        patterns: "*.env"
+        file_type: file
+      register: restic_existing_target_env_files
+
+    - name: Remove stale managed restic target env files
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ restic_existing_target_env_files.files | default([]) }}"
+      loop_control:
+        label: "{{ item.path | basename }}"
+      when: item.path not in restic_desired_target_env_paths
+
+    - name: Find existing managed restic password files
+      ansible.builtin.find:
+        paths: "{{ host_restic.passwords_dir }}"
+        patterns: "*.password"
+        file_type: file
+      register: restic_existing_password_files
+
+    - name: Remove stale managed restic password files
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ restic_existing_password_files.files | default([]) }}"
+      loop_control:
+        label: "{{ item.path | basename }}"
+      when: item.path not in restic_desired_password_paths
+
+    - name: Check existing managed restic SSH directory
+      ansible.builtin.stat:
+        path: "{{ host_restic.ssh_dir }}"
+      register: restic_ssh_dir_stat
+
+    - name: Find existing managed restic SSH material
+      ansible.builtin.find:
+        paths: "{{ host_restic.ssh_dir }}"
+        patterns:
+          - "*.key"
+          - "*_known_hosts"
+        file_type: file
+      register: restic_existing_ssh_files
+      when: restic_ssh_dir_stat.stat.exists | default(false)
+
+    - name: Remove stale managed restic SSH material
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ restic_existing_ssh_files.files | default([]) }}"
+      loop_control:
+        label: "{{ item.path | basename }}"
+      when: item.path not in restic_desired_ssh_paths
+
+    - name: Find existing managed restic job config files
+      ansible.builtin.find:
+        paths: "{{ host_restic.jobs_dir }}"
+        patterns: "*.sh"
+        file_type: file
+      register: restic_existing_job_config_files
+
+    - name: Remove stale managed restic job config files
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ restic_existing_job_config_files.files | default([]) }}"
+      loop_control:
+        label: "{{ item.path | basename }}"
+      when: item.path not in restic_desired_job_config_paths
+
     - name: Render generic restic backup runner
       ansible.builtin.template:
         src: restic-backup.sh.j2

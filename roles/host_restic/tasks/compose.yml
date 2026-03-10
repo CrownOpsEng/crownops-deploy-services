@@ -8,10 +8,17 @@
     restic_effective_jobs: []
     restic_effective_pairs: []
     restic_desired_unit_paths: []
+    restic_desired_target_env_paths: []
+    restic_desired_password_paths: []
+    restic_desired_job_config_paths: []
+    restic_desired_ssh_paths: []
 
 - name: Normalize enabled backup targets
   ansible.builtin.set_fact:
     restic_effective_targets: "{{ restic_effective_targets + [restic_target_normalized] }}"
+    restic_desired_target_env_paths: "{{ restic_desired_target_env_paths + [host_restic.targets_dir ~ '/' ~ restic_target_normalized.name ~ '.env'] }}"
+    restic_desired_password_paths: "{{ restic_desired_password_paths + [host_restic.passwords_dir ~ '/' ~ restic_target_normalized.name ~ '.password'] }}"
+    restic_desired_ssh_paths: "{{ restic_desired_ssh_paths + restic_target_ssh_paths }}"
   loop: "{{ host_restic.targets | default([]) }}"
   loop_control:
     label: "{{ item.name | default('unnamed-target') }}"
@@ -26,6 +33,19 @@
       sftp_command: "{{ item.sftp_command | default('') | string }}"
       environment: "{{ item.environment | default({}) }}"
       auto_init: "{{ item.auto_init | default(host_restic.defaults.auto_init) | bool }}"
+    restic_target_ssh_paths: >-
+      {{
+        (
+          [host_restic.ssh_dir ~ '/' ~ restic_target_normalized.name ~ '.key']
+          if (restic_target_normalized.ssh_private_key | length) > 0
+          else []
+        )
+        + (
+          [host_restic.ssh_dir ~ '/' ~ restic_target_normalized.name ~ '_known_hosts']
+          if (restic_target_normalized.ssh_known_hosts | length) > 0
+          else []
+        )
+      }}
   when: item.enabled | default(true) | bool
 
 - name: Capture effective target names
@@ -60,6 +80,16 @@
     loop_var: restic_job_input
     label: "{{ restic_job_input.name | default('unnamed-job') }}"
   when: restic_job_input.enabled | default(true) | bool
+
+- name: Capture desired job config paths
+  ansible.builtin.set_fact:
+    restic_desired_job_config_paths: >-
+      {{
+        restic_effective_jobs
+        | map(attribute='name')
+        | map('regex_replace', '^(.*)$', host_restic.jobs_dir ~ '/\\1.sh')
+        | list
+      }}
 
 - name: Build effective job-target pairs
   ansible.builtin.set_fact:
