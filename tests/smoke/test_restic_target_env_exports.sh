@@ -22,6 +22,7 @@ cat > "${TMP_DIR}/render.yml" <<EOF
         restic_target:
           name: h4f
           repository: sftp:backup@example.com:/srv/restic/core
+          sftp_port: 2222
           auto_init: true
           sftp_command: ""
           ssh_private_key: "test-key"
@@ -43,5 +44,15 @@ for expected in \
     exit 1
   fi
 done
+
+if ! grep -F 'backup@example.com' "${TMP_DIR}/h4f.env" >/dev/null; then
+  echo "rendered restic target env should include the sftp destination in RESTIC_SFTP_COMMAND" >&2
+  exit 1
+fi
+
+if ! grep -F ' -p 2222 ' "${TMP_DIR}/h4f.env" >/dev/null; then
+  echo "rendered restic target env should include the configured non-default SFTP port" >&2
+  exit 1
+fi
 
 printf 'restic target env export smoke test passed\n'

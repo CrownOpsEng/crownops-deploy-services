@@ -45,6 +45,7 @@
       - (item.password | length) > 0
       - item.environment is mapping
       - (item.ssh_private_key | length) == 0 or (item.sftp_command | length) > 0 or (item.ssh_known_hosts | length) > 0
+      - (item.ssh_private_key | length) == 0 or (item.sftp_command | length) > 0 or (item.repository is match('^sftp:[^:]+:.+$'))
     fail_msg: "Invalid restic target '{{ item.name | default('unnamed') }}'."
   loop: "{{ restic_effective_targets }}"
   loop_control:
