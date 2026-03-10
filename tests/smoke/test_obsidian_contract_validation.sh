@@ -10,6 +10,8 @@ cat > "${TMP_DIR}/play.yml" <<EOF
 - hosts: localhost
   connection: local
   gather_facts: false
+  vars:
+    ops_domain: ops.example.com
   tasks:
     - ansible.builtin.include_role:
         name: ${ROOT_DIR}/roles/obsidian_livesync

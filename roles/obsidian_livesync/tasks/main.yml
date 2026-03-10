@@ -27,7 +27,6 @@
     - acme_dns_provider
     - acme_env
     - obsidian_service_subdomain
-    - ops_domain
   loop_control:
     loop_var: legacy_var
 
