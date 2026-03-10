@@ -12,7 +12,7 @@ services:
       - "{{ couchdb_bind_host }}:{{ couchdb_port }}:5984"
     volumes:
       - {{ couchdb_dir }}/data:/opt/couchdb/data
-      - {{ couchdb_dir }}/etc/local.ini:/opt/couchdb/etc/local.d/local.ini:ro
+      - {{ couchdb_dir }}/etc/local.ini:/opt/couchdb/etc/local.d/local.ini
 networks:
   {{ internal_network_name }}:
     name: {{ internal_network_name }}
