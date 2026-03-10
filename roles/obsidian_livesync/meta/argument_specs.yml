@@ -7,6 +7,8 @@ argument_specs:
         type: dict
         required: true
         options:
+          enabled:
+            type: bool
           access_mode:
             type: str
             choices:
@@ -16,9 +18,18 @@ argument_specs:
             type: str
           handoff_dir:
             type: str
+          private_mesh:
+            type: dict
+            options:
+              url_strategy:
+                type: str
+              tailnet_name:
+                type: str
           ingress:
             type: dict
             options:
+              route_name:
+                type: str
               shared_network_name:
                 type: str
           couchdb:

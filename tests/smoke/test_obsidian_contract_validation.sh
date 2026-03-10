@@ -15,10 +15,15 @@ cat > "${TMP_DIR}/play.yml" <<EOF
         name: ${ROOT_DIR}/roles/obsidian_livesync
       vars:
         obsidian_livesync:
+          enabled: true
           access_mode: invalid
           base_url: https://notes.example.com
           handoff_dir: /tmp/crownops-handoff
+          private_mesh:
+            url_strategy: tailscale_magicdns
+            tailnet_name: crownops.ts.net
           ingress:
+            route_name: obsidian-couchdb
             shared_network_name: proxy
           couchdb:
             dir: /tmp/crownops-couchdb
